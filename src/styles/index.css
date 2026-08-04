@@ -1,0 +1,32 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+    * {
+        font-family: 'Poppins', sans-serif;
+    }
+    
+    body,
+    html {
+        font-family: 'Poppins', sans-serif;
+    }
+    
+    input,
+    textarea,
+    select,
+    button {
+        font-family: 'Poppins', sans-serif;
+    }
+}
+
+@layer utilities {
+    .no-scrollbar::-webkit-scrollbar {
+        display: none;
+    }
+
+    .no-scrollbar {
+        -ms-overflow-style: none;
+        scrollbar-width: none;
+    }
+}

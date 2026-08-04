@@ -1,0 +1,578 @@
+Admin Dashboard
+
+
+
+For admin, most of the features are there. Given that the API is not integrated, I found it less meaningful to report and flag bugs here. This will be retested on milestone 3. 
+
+Family Owner
+Governance Issue
+
+The current Governance page appears to focus on constitutional rules and family policies, but it does not yet show role and permission management.
+According to the PRD, governance must include role hierarchy and authority assignment (Family Owner, Family Admin, Branch Admin, Editor, etc.).
+Could you confirm where role assignment and permission management are handled? If not yet implemented, we may need a separate Roles & Authority section under Governance to manage administrative roles and permissions.
+
+Family Owner → Branches
+Overall, the Branch module is well designed and mostly aligned with the client requirements. The structure correctly treats a branch as a lineage governance boundary, which matches the intended architecture of the platform.
+Estimated alignment: ~75–80%
+The following areas are working well, and a few areas may require refinement before final sign-off.
+What Is Working Well1. Root Ancestor Linkage The branch configuration allows defining a Root Ancestor Node.
+Example:
+Root Ancestor: Charles Windsor
+
+
+This is correct because the client specification defines that:
+Branches are lineage groupings connected to a root ancestor within the unified clan tree.
+This ensures branches are not separate trees, but structured segments of the main genealogy graph.
+2. Branch Leadership
+The screen allows defining a Branch Head.
+Example:
+Branch Head: Prince William
+
+
+This aligns with the intended structure where each branch has a recognized lineage leader or representative.
+This role can later support features such as:
+branch moderation
+branch invitations
+branch event leadership
+
+
+3. Invite Policy
+The branch settings allow choosing between:
+Open Invite
+Admin Approval Required
+
+
+This aligns with the client requirement for controlled onboarding and claim approval flows, especially when users attempt to join a branch.
+4. Permission Overrides
+The branch-level permission overrides are well implemented.
+Examples include:
+Who can add members
+Who can edit branch history
+Media upload privileges
+
+
+These settings allow branches to define their own internal contribution rules, which aligns with the requirement for branch-scoped governance.
+Areas That May Need Adjustment
+
+1. Branch Admin Role
+Currently the interface only shows:
+Branch Head
+
+
+However, the client specification includes the concept of Branch Admin, which is a system role distinct from lineage leadership.
+These roles serve different purposes:
+Role
+Purpose
+Branch Head
+symbolic or lineage leader
+Branch Admin
+operational manager in the system
+
+In many families, the elder lineage head may not be the person managing the digital platform.
+Recommendation:
+Add a separate field:
+Branch Head
+Branch Admin
+
+
+2. Branch Privacy Settings
+The current screen does not show branch visibility controls.
+The platform includes strong privacy requirements, so branches should support visibility modes such as:
+Public branch
+Family-only branch
+Restricted/private branch
+
+
+This allows the system to support sensitive or private sub-lineages.
+3. Additional Branch Metadata
+Current fields include:
+Branch title
+Description
+Origin region
+
+
+These are good, but additional metadata may improve integration with other modules such as Migration Map and Family History.
+Potential additions:
+Branch founding year
+Migration origin
+Branch emblem or symbol
+Associated history chapter
+
+
+4. Branch Analytics
+Branch cards currently show:
+member count
+label such as LOW / MEDIUM / HIGH
+
+
+However the meaning of these labels is unclear.
+Instead, the branch detail page could include structured information such as:
+number of members
+number of households
+number of generations
+linked migration nodes
+linked history chapters
+media assets
+
+
+This would make branch management more informative.
+5. Branch Management Actions
+Branch configuration currently focuses on settings.
+It may also be helpful to ensure that branch administrators have access to actions such as:
+viewing branch members
+approving branch claim requests
+exporting branch reports
+merging branche
+archiving branches
+
+
+These functions are often required when managing large family structures.
+Minor UI Suggestions
+Branch Icons
+The current icons appear to be generic placeholders.
+Possible improvements could include:
+allowing a custom branch emblem
+using lineage or heritage themed icons
+optionally displaying a branch crest or symbol
+
+
+Branch Size Labels
+The labels LOW / MEDIUM / HIGH are unclear.
+If the intention is to indicate size, clearer labels could be:
+Small
+Medium
+Large
+
+
+Alternatively, the label could be removed if it does not add meaningful information.
+Additional Governance Observation
+One important element still appears to be missing at the system level:
+A dedicated interface for managing administrative roles, including:
+Family Admin
+Co-Admin
+Branch Admin
+Editor
+Member
+
+
+Currently the system only appears to display roles such as:
+Administrator
+Member
+
+
+Expanding the role structure will help align the system with the client requirements for multi-level governance.
+Family Tree
+1. Relationship Approval Workflow
+The current UI suggests edits happen directly.
+However, the client specification requires:
+Relationship edits should be request-based.
+Member submits change request.
+Admin approves.
+This prevents incorrect lineage edits.
+Recommendation:
+When a non-admin user edits relationships, the system should create:
+Relationship Change Request
+Status: Pending / Approved / Rejected
+Admins approve in the moderation queue.
+2. Claim System Integration
+The tree does not visibly show whether a person is:
+claimed by a user
+
+
+unclaimed profile
+
+
+managed by guardian (minor)
+
+
+The client requirements include an Identity Claim System.
+The UI should show something like:
+✓ Claimed
+Unclaimed
+Guardian Managed
+This is important because genealogy nodes may exist without accounts.
+3. Branch Labels
+The current nodes do not show branch affiliation.
+But branches are a governance boundary in the platform.
+Nodes should optionally display:
+Branch: Windsor
+Branch: Spencer
+This helps admins understand lineage structure inside the tree.
+4. Privacy Indicators
+The client requirements include field-level privacy control.
+Examples:
+hidden birth date
+
+
+private person
+
+
+minor protection
+
+
+Currently the UI shows all fields equally.
+There should be indicators such as:
+🔒 Private
+👶 Minor
+This prevents accidental exposure.
+5. Timeline / History Integration
+The person panel does not yet show:
+Timeline entries
+Migration history
+Media attachments
+These are defined in the client requirements.
+Eventually the person panel should support:
+life timeline
+attached photos
+historical records
+migration nodes
+
+
+6. Generation Navigation
+The tree currently shows one view.
+Large families will need:
+Focus view
+Branch subtree view
+Global overview
+This may exist already but is not visible here.
+7. Household Layer (Optional but Recommended)
+The PRD mentions households.
+Example structure:
+Household
+Parent couple
+Children group
+Right now the tree shows only parent-child relationships.
+Households help visually group families.
+Minor UI Suggestions
+1. Repeated Placeholder Names
+The nodes currently show repeated example names like:
+Arthur Harrison
+Once populated with real data, the structure will be clearer.
+
+2. Add Relationship Lines for Spouses
+Currently only parent-child hierarchy is obvious.
+Spousal connections should display clearly.
+Typical genealogy display:
+Person — Spouse
+     |
+   Children
+
+3. Node Action Shortcut
+Right now editing occurs in the side panel.
+You might also consider a small node menu:
+Add child
+Add spouse
+Edit
+This speeds up editing.
+Important Architectural Check
+Based on what we see, the data model appears correct.
+The tree likely uses something like:
+Person
+PersonRelation
+Relationships:
+parent -> child
+spouse <-> spouse
+This is exactly what the client requirements specify.
+So structurally this is a strong implementation.
+
+System
+This section is currently under development. So you need to continue work on that
+
+Below is what should ideally live there.
+1. Ownership & Administrative Control
+This is the most critical function of the Owner.
+Possible features:
+Transfer Family Ownership
+Assign / remove Family Admin
+Assign Co-Admin
+View role hierarchy
+Emergency lock / suspend family space
+
+
+Example:
+Ownership Management
+• Transfer ownership
+• Assign Family Admin
+• Remove admin access
+• View admin activity
+This ensures the Owner remains the ultimate authority.
+2. Data Export & Archival
+Owners often want long-term records.
+Features could include:
+Export full genealogy dataset
+Export family tree JSON / CSV
+Download media archive
+Export member directory
+Backup download
+
+
+Example:
+Data Export
+• Full genealogy export
+• Member directory export
+• Media archive export
+• Migration map export
+This is critical for historical preservation.
+
+3. Backup & Recovery
+Because family history is valuable data.
+Features:
+Backup schedule
+Restore previous snapshot
+Download backup
+Version history
+
+
+Example:
+Backup & Recovery
+• Automatic daily backup
+• Restore snapshot
+• Backup history
+
+4. Storage & Resource Usage
+This helps the Owner manage the family space resources.
+Example metrics:
+total media storage used
+number of members
+number of branches
+event storage
+report storage
+
+
+Example:
+Storage Management
+Total storage used
+Media storage quota
+Archive management
+5. Integration & API
+If the platform supports integration (especially with KCC Coin / BigK wallet).
+Possible items:
+API keys
+webhook configuration
+external integrations
+KCC Coin wallet connection
+
+
+Example:
+Integration
+API keys
+Webhooks
+KCC Coin integration
+External services
+6. Platform Configuration
+General technical configuration that affects the whole family space.
+Examples:
+timezone
+default language
+notification settings
+email configuration
+moderation thresholds
+
+
+Example:
+Platform Settings
+Default language
+Timezone
+Notification rules
+Moderation policy
+
+7. Compliance & Privacy Tools
+Since the platform handles personal data.
+Features:
+export personal data (GDPR)
+delete user data
+anonymize profiles
+audit log export
+
+
+Example:
+Compliance Tools
+Export personal data
+Delete family space
+Audit log export
+What Should NOT Go in System
+The System section should not duplicate operational tools like:
+editing members
+managing branches
+creating events
+approving claims
+
+
+Those belong in Admin operations, not System.
+One More Important Observation
+From everything you’ve shown so far, the Family Owner panel is missing one major capability:
+👉 Role management UI
+The Owner should be able to:
+assign Family Admin
+assign Branch Admin
+demote admins
+
+
+We still haven’t seen where that happens.
+It may appear when editing a member profile.
+
+Family Owner → Members → Edit one member
+
+Major Missing Controls (Owner Level)
+The Family Owner cannot manage roles from this screen.
+There is no section for:
+Role assignment
+Admin privileges
+Branch assignment
+Account status
+Claim ownership
+
+
+That means the Owner currently cannot control administrators, which contradicts the governance model.
+What Should Exist Here
+The Owner should have a section like this:
+Role & Access Control
+ 
+○ Member
+○ Editor
+○ Branch Admin
+○ Family Admin
+○ Owner (view only)
+
+Branch Assignment
+[ Dropdown ]
+
+Account Status
+○ Active
+○ Suspended
+○ Pending Claim
+
+Permissions
+☑ Can manage branch
+☑ Can edit family tree
+☑ Can approve claims
+☑ Can upload media
+Without this, the Owner cannot delegate authority, which is a major system gap.
+Second Missing Element: Claim Status
+Since the system is genealogy-based, each person node should optionally be linked to a user account.
+There should be something like:
+Account Binding
+Linked User: john@email.com
+
+Claim Status
+✔ Claimed
+Pending
+Unclaimed
+
+Guardian (if minor)
+Parent Account
+Right now this screen treats a member only as a profile, not as a user identity.
+That will break the claim system later.
+Third Missing Element: Privacy Overrides
+Since there is a Privacy module, the Owner should be able to override it per member.
+Example:
+Profile Visibility
+○ Public
+○ Family Only
+○ Branch Only
+○ Private
+
+Hide birth date
+Hide location
+Hide living status
+Right now privacy is only global.
+Fourth Missing Element: Branch Role
+Because you already have branches, the Owner should be able to assign:
+Branch Role
+○ None
+○ Branch Member
+○ Branch Editor
+○ Branch Leader
+This is essential for governance.
+One More Structural Observation
+Right now the system mixes Person record and Member record.
+But in a genealogy system these should be different:
+Concept
+Meaning
+Person
+historical individual in the tree
+Member
+user account in the system
+
+Example:
+Grandfather may be a person but not a user.
+So the admin panel should eventually show:
+Person Record
+User Account (optional)
+This screen currently only manages Person data.
+Summary of What Client Should Request
+The Edit Member Profile page should add a new section:
+Governance & Access
+Including:
+Role
+Branch Role
+Account Status
+Claim Status
+Linked User
+Permission Overrides
+Audit Log
+
+Things the Client Should Verify (Important)
+There are three categories of actions that MUST appear in logs but are not visible in the sample.
+1️⃣ Family Tree Edits
+Since this is a genealogy platform, the most important logs are:
+Person added
+Person edited
+Relationship added
+Relationship removed
+Parent changed
+Child moved to another branch
+
+
+Example entries should look like:
+Person Added
+Relationship Updated
+Parent Link Created
+Child Link Removed
+Branch Reassigned
+These are critical lineage events.
+2️⃣ Governance Actions
+The Owner panel contains governance settings.
+These must be logged:
+Admin role assignment
+Branch leader assignment
+Governance rule changes
+Privacy rule changes
+
+
+Example:
+Admin Role Granted
+Branch Leader Assigned
+Governance Policy Updated
+Privacy Rule Modified
+Right now we only see Role Edit, which may not be granular enough.
+3️⃣ Report Generation
+Since the system includes Descendant Reports and Album Builder, these must be logged:
+Report Generated
+Report Downloaded
+Album Created
+Album Downloaded
+This prevents mass data extraction without traceability.
+One Feature Missing (Recommended)
+The log entry currently shows only Action Type.
+But governance logs should also show object context.
+Example:
+Instead of:
+Role Edit
+It should show:
+Role Edit
+Target: Sophia Carter
+Old Role: Member
+New Role: Branch Admin
+Or:
+Privacy Change
+Field: Birth Date
+Visibility: Family → Private
+This makes the logs forensic quality.
+One Small UI Suggestion
+The Export to PDF button is good, but for large families the client may want:
+Export CSV
+Export JSON
+Export Full Audit Archive
+CSV especially helps when analyzing logs in spreadsheets.
+
