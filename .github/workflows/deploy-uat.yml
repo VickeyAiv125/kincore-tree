@@ -1,0 +1,48 @@
+name: Deploy UAT Admin
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: uat-admin
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+
+      - name: Install & build (UAT API)
+        env:
+          VITE_API_BASE_URL: https://uat.api.kincore.com/api
+          # Anon key is publishable (same as local UAT build)
+          VITE_SUPABASE_URL: https://fpzuqnpoksaeacedirns.supabase.co
+          VITE_SUPABASE_ANON_KEY: sb_publishable_kPpwNv366jML2cE1HNtMaA_3ia5XAmF
+        run: |
+          npm ci
+          npm run build
+
+      - name: Setup SSH
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.UAT_SSH_KEY }}" > ~/.ssh/uat_key
+          chmod 600 ~/.ssh/uat_key
+          ssh-keyscan -p "${{ secrets.UAT_SSH_PORT || 22 }}" -H "${{ secrets.UAT_HOST }}" >> ~/.ssh/known_hosts
+
+      - name: Rsync dist to uat.admin.kincore.com
+        env:
+          HOST: ${{ secrets.UAT_HOST }}
+          USER: ${{ secrets.UAT_USER }}
+          PORT: ${{ secrets.UAT_SSH_PORT || 22 }}
+        run: |
+          rsync -avz --delete \
+            -e "ssh -i ~/.ssh/uat_key -p ${PORT} -o IdentitiesOnly=yes" \
+            ./dist/ "${USER}@${HOST}:/var/www/uat.admin.kincore.com/"
