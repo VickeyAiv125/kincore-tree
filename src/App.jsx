@@ -209,6 +209,7 @@ function App() {
         <Route path="/migration" element={<Layout><MigrationMap /></Layout>} />
         <Route path="/migration/add" element={<Layout><CreateMigrationPoint /></Layout>} />
         <Route path="/migration-map/webview/:familySpaceId" element={<MigrationMapWebview />} />
+        <Route path="/family-tree/webview" element={<FamilyTree />} />
         <Route path="/family-tree/webview/:familySpaceId" element={<FamilyTree />} />
         <Route path="/kcc" element={<Layout><KCCCoin /></Layout>} />
         <Route path="/reports" element={<Layout><Reports /></Layout>} />

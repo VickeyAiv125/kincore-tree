@@ -396,9 +396,13 @@ const FamilyTree = () => {
             try {
                 const storedUser = JSON.parse(localStorage.getItem('user') || '{}');
                 const urlParams = new URLSearchParams(window.location.search);
-                const pathParts = window.location.pathname.split('/');
-                const webviewParamId = pathParts.includes('webview') ? pathParts[pathParts.indexOf('webview') + 1] : null;
-                const familyId = webviewParamId
+                const queryToken = urlParams.get('token');
+                if (queryToken) localStorage.setItem('token', queryToken);
+
+                const pathParts = window.location.pathname.split('/').filter(Boolean);
+                const webviewIdx = pathParts.indexOf('webview');
+                const webviewParamId = webviewIdx >= 0 ? pathParts[webviewIdx + 1] : null;
+                const rawFamilyId = webviewParamId
                     || urlParams.get('family_space_id')
                     || urlParams.get('familyId')
                     || localStorage.getItem('currentFamilySpaceId')
@@ -406,6 +410,7 @@ const FamilyTree = () => {
                     || storedUser?.family_id
                     || storedUser?.family_space_id
                     || '';
+                const familyId = (!rawFamilyId || rawFamilyId === 'auto') ? '' : rawFamilyId;
 
                 // Build URL — if no familyId, backend auto-detects from token
                 const url = familyId
@@ -616,8 +621,8 @@ const FamilyTree = () => {
                     </div>
                 </div>
 
-                {/* Zoom Controls — fixed, stays right of center, left of the right sidebar */}
-                <div className="fixed top-4 right-[368px] z-30 flex flex-col space-y-1">
+                {/* Zoom Controls — inset for sidebar on web; flush right in app WebView */}
+                <div className={`fixed top-4 z-30 flex flex-col space-y-1 ${isAppView ? 'right-4' : 'right-[368px]'}`}>
                     <div className="bg-white/80 dark:bg-brand-darkCard/80 backdrop-blur-md p-1.5 rounded-2xl border border-gray-100 dark:border-brand-darkBorder shadow-xl flex flex-col space-y-0.5">
                         <button onClick={() => handleZoom(0.1)} className="p-2.5 hover:bg-gray-100 dark:hover:bg-brand-darkBg rounded-xl text-gray-400 hover:text-brand-orange transition-colors" title="Zoom In">
                             <Plus size={16} strokeWidth={3} />
