@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { getTreeWebviewContext } from '../../utils/treeWebviewNav';
+import TreeNodeAddModal from '../../components/tree/TreeNodeAddModal';
 import {
     Plus, Baby, Shield, Lock, UserCheck, MapPin, FileText,
     Skull, Calendar, RefreshCw, Undo2, Save, Info, UserPlus, Search, GitMerge, Heart, ChevronUp,
@@ -166,7 +167,7 @@ const LegendItem = ({ icon: Icon, label, color }) => (
     </div>
 );
 
-const TreeNode = React.forwardRef(({ person, isActive, isChild, onAction, onClick }, ref) => {
+const TreeNode = React.forwardRef(({ person, isActive, isChild, onAddClick, onClick }, ref) => {
     const [isHovered, setIsHovered] = useState(false);
     const name = getPersonName(person);
     const status = getStatus(person);
@@ -199,15 +200,15 @@ const TreeNode = React.forwardRef(({ person, isActive, isChild, onAction, onClic
                 {status.isDeceased && <div className="w-5 h-5 bg-gray-400 text-white rounded-full flex items-center justify-center shadow-lg"><Skull size={10} /></div>}
             </div>
 
-            {/* Hover Actions */}
-            <div className={`absolute -bottom-3.5 left-1/2 -translate-x-1/2 flex items-center space-x-2 transition-all duration-200 ${isHovered ? 'opacity-100 scale-100' : 'opacity-25 scale-90'}`}>
-                <button onClick={(e) => { e.stopPropagation(); onAction('Add Child', person); }}
-                    className="w-6 h-6 bg-brand-orange text-white rounded-full flex items-center justify-center shadow-md hover:scale-110 active:scale-95 transition-transform" title="Add Child">
-                    <Plus size={11} strokeWidth={3} />
-                </button>
-                <button onClick={(e) => { e.stopPropagation(); onAction('Add Spouse', person); }}
-                    className="w-6 h-6 bg-pink-500 text-white rounded-full flex items-center justify-center shadow-md hover:scale-110 active:scale-95 transition-transform" title="Add Spouse">
-                    <UserPlus size={11} strokeWidth={3} />
+            {/* Add (+) — opens spouse / parent / member menu */}
+            <div className={`absolute -bottom-3.5 left-1/2 -translate-x-1/2 transition-all duration-200 ${isHovered ? 'opacity-100 scale-100' : 'opacity-25 scale-90'}`}>
+                <button
+                    type="button"
+                    onClick={(e) => { e.stopPropagation(); onAddClick?.(person); }}
+                    className="w-7 h-7 bg-brand-orange text-white rounded-full flex items-center justify-center shadow-md hover:scale-110 active:scale-95 transition-transform"
+                    title="Add spouse, parent, or member"
+                >
+                    <Plus size={13} strokeWidth={3} />
                 </button>
             </div>
 
@@ -284,6 +285,8 @@ const FamilyTree = () => {
     // Data
     const [persons, setPersons] = useState([]);
     const [relationships, setRelationships] = useState([]);
+    const [activeFamilySpaceId, setActiveFamilySpaceId] = useState('');
+    const [addModal, setAddModal] = useState(null);
     const [treeStructure, setTreeStructure] = useState({ generations: [], childrenOf: {}, parentsOf: {}, spouseOf: {}, personMap: new Map() });
     const [selectedMember, setSelectedMember] = useState(null);
     const [loading, setLoading] = useState(true);
@@ -391,62 +394,66 @@ const FamilyTree = () => {
     const zoomRef = useRef(zoom);
     useEffect(() => { zoomRef.current = zoom; }, [zoom]);
 
-    useEffect(() => {
-        const fetchData = async () => {
-            setLoading(true);
-            try {
-                const storedUser = JSON.parse(localStorage.getItem('user') || '{}');
-                const urlParams = new URLSearchParams(window.location.search);
-                const queryToken = urlParams.get('token');
-                if (queryToken) localStorage.setItem('token', queryToken);
+    const fetchTreeData = useCallback(async () => {
+        setLoading(true);
+        try {
+            const storedUser = JSON.parse(localStorage.getItem('user') || '{}');
+            const urlParams = new URLSearchParams(window.location.search);
+            const queryToken = urlParams.get('token');
+            if (queryToken) localStorage.setItem('token', queryToken);
 
-                const pathParts = window.location.pathname.split('/').filter(Boolean);
-                const webviewIdx = pathParts.indexOf('webview');
-                const webviewParamId = webviewIdx >= 0 ? pathParts[webviewIdx + 1] : null;
-                const rawFamilyId = webviewParamId
-                    || urlParams.get('family_space_id')
-                    || urlParams.get('familyId')
-                    || localStorage.getItem('currentFamilySpaceId')
-                    || localStorage.getItem('selected_family_id')
-                    || storedUser?.family_id
-                    || storedUser?.family_space_id
-                    || '';
-                const familyId = (!rawFamilyId || rawFamilyId === 'auto') ? '' : rawFamilyId;
+            const pathParts = window.location.pathname.split('/').filter(Boolean);
+            const webviewIdx = pathParts.indexOf('webview');
+            const webviewParamId = webviewIdx >= 0 ? pathParts[webviewIdx + 1] : null;
+            const rawFamilyId = webviewParamId
+                || urlParams.get('family_space_id')
+                || urlParams.get('familyId')
+                || localStorage.getItem('currentFamilySpaceId')
+                || localStorage.getItem('selected_family_id')
+                || storedUser?.family_id
+                || storedUser?.family_space_id
+                || '';
+            const familyId = (!rawFamilyId || rawFamilyId === 'auto') ? '' : rawFamilyId;
 
-                // Build URL — if no familyId, backend auto-detects from token
-                const url = familyId
-                    ? `${API}/clantree/data?family_space_id=${familyId}`
-                    : `${API}/clantree/data`;
-
-                console.log('[FamilyTree] Fetching tree from:', url, '| familyId:', familyId || '(auto-detect)');
-
-                const res = await fetch(url, {
-                    headers: { Authorization: `Bearer ${token()}` }
-                });
-
-                const ct = res.headers.get('content-type') || '';
-                if (!res.ok || !ct.includes('application/json')) {
-                    console.warn('[FamilyTree] Non-JSON or error response.');
-                    setLoading(false);
-                    return;
-                }
-
-                const data = await res.json();
-                const p = data.persons || [];
-                const r = data.relationships || [];
-                setPersons(p);
-                setRelationships(r);
-                if (p.length > 0) setSelectedMember(mapToMember(p[0]));
-            } catch (err) {
-                console.error('Failed to fetch tree:', err);
-            } finally {
-                setLoading(false);
+            if (familyId) {
+                setActiveFamilySpaceId(familyId);
+                localStorage.setItem('currentFamilySpaceId', familyId);
+                localStorage.setItem('selected_family_id', familyId);
             }
-        };
 
-        fetchData();
+            const url = familyId
+                ? `${API}/clantree/data?family_space_id=${familyId}`
+                : `${API}/clantree/data`;
 
-        const handleStorageChange = () => fetchData();
+            const res = await fetch(url, {
+                headers: { Authorization: `Bearer ${token()}` }
+            });
+
+            const ct = res.headers.get('content-type') || '';
+            if (!res.ok || !ct.includes('application/json')) {
+                console.warn('[FamilyTree] Non-JSON or error response.');
+                return;
+            }
+
+            const data = await res.json();
+            const p = data.persons || [];
+            const r = data.relationships || [];
+            setPersons(p);
+            setRelationships(r);
+            if (p.length > 0) {
+                setSelectedMember((prev) => prev || mapToMember(p[0]));
+            }
+        } catch (err) {
+            console.error('Failed to fetch tree:', err);
+        } finally {
+            setLoading(false);
+        }
+    }, []);
+
+    useEffect(() => {
+        fetchTreeData();
+
+        const handleStorageChange = () => fetchTreeData();
         window.addEventListener('familySpaceChanged', handleStorageChange);
         return () => window.removeEventListener('familySpaceChanged', handleStorageChange);
     }, []);
@@ -529,58 +536,47 @@ const FamilyTree = () => {
     // e.preventDefault() stops browser-level Ctrl+scroll zoom from scaling the whole page
     const handleWheel = (e) => { e.preventDefault(); handleZoom(e.deltaY > 0 ? -0.1 : 0.1); };
 
-    /* ── Actions ── */
+    /* ── Add spouse / parent / member (popup) ── */
+    const openAddModal = (person, addType = null) => {
+        if (!person?.id) return;
+        setSelectedMember(mapToMember(person));
+        setAddModal({
+            person,
+            step: addType ? 'form' : 'menu',
+            addType: addType || null,
+        });
+    };
+
+    const handleAddClick = (person) => openAddModal(person);
+
+    const handleAddSuccess = (message) => {
+        setAddModal(null);
+        showAlert(message || 'Saved successfully.', 'success', 'Success');
+        fetchTreeData();
+    };
+
+    /* ── Actions (sidebar / legacy) ── */
     const handleAction = (action, personOverride = null) => {
         const target = personOverride || selectedMember;
         if (!target?.id) return;
-        
-        const state = { 
-            target_person_id: target.id, 
-            target_name: target.name || getPersonName(target) 
+
+        const typeMap = {
+            'Add Spouse': 'spouse',
+            'Add Parent': 'parent',
+            'Add Member': 'member',
         };
-
-        const { isAppView, spaceId, token: appToken } = getTreeWebviewContext();
-
-        if (isAppView && spaceId) {
-            const appSearch = appToken
-                ? `view=app&token=${encodeURIComponent(appToken)}`
-                : 'view=app';
-            switch (action) {
-                case 'Add Spouse':
-                    navigate(
-                        { pathname: `/family-tree/webview/${spaceId}/add-member`, search: appSearch },
-                        { state: { ...state, relationship_type: 'spouse' } }
-                    );
-                    break;
-                case 'Add Child':
-                    navigate(
-                        { pathname: `/family-tree/webview/${spaceId}/add-child`, search: appSearch },
-                        { state }
-                    );
-                    break;
-                case 'Add Parent':
-                    navigate(
-                        { pathname: `/family-tree/webview/${spaceId}/add-parent`, search: appSearch },
-                        { state }
-                    );
-                    break;
-                case 'Add Member':
-                    navigate(
-                        { pathname: `/family-tree/webview/${spaceId}/add-member`, search: appSearch },
-                        { state: { ...state, relationship_type: 'member' } }
-                    );
-                    break;
-                default: break;
-            }
+        if (typeMap[action]) {
+            openAddModal(target, typeMap[action]);
             return;
         }
-        
-        switch (action) {
-            case 'Add Spouse': navigate('/governance/add-spouse', { state }); break;
-            case 'Add Child': navigate('/governance/add-child', { state }); break;
-            case 'Add Parent': navigate('/governance/add-parents', { state }); break;
-            case 'Add Member': navigate('/owner/add-member', { state: { title: 'Add Member', ...state } }); break;
-            default: break;
+
+        const state = {
+            target_person_id: target.id,
+            target_name: target.name || getPersonName(target),
+        };
+
+        if (action === 'Add Child') {
+            navigate('/governance/add-child', { state });
         }
     };
 
@@ -731,7 +727,7 @@ const FamilyTree = () => {
                                                     person={person}
                                                     isActive={selectedMember?.id === person.id}
                                                     isChild={personIsChild}
-                                                    onAction={handleAction}
+                                                    onAddClick={handleAddClick}
                                                     onClick={() => handleNodeClick(person)}
                                                 />
                                             );
@@ -762,36 +758,17 @@ const FamilyTree = () => {
                 </div>
             </div>
 
-            {isAppView && selectedMember && (
-                <div className="fixed bottom-0 left-0 right-0 z-40 bg-white/95 dark:bg-brand-darkCard/95 border-t border-gray-100 dark:border-brand-darkBorder backdrop-blur-md p-4 pb-6 safe-area-bottom">
-                    <p className="text-[10px] font-black uppercase tracking-widest text-gray-400 mb-3 text-center">
-                        {selectedMember.name}
-                    </p>
-                    <div className="grid grid-cols-3 gap-2 max-w-lg mx-auto">
-                        <button
-                            type="button"
-                            onClick={() => handleAction('Add Child')}
-                            className="bg-brand-orange text-white rounded-2xl py-3 text-[10px] font-black uppercase tracking-wider"
-                        >
-                            Add Child
-                        </button>
-                        <button
-                            type="button"
-                            onClick={() => handleAction('Add Parent')}
-                            className="bg-gray-900 text-white rounded-2xl py-3 text-[10px] font-black uppercase tracking-wider"
-                        >
-                            Add Parent
-                        </button>
-                        <button
-                            type="button"
-                            onClick={() => handleAction('Add Member')}
-                            className="bg-pink-500 text-white rounded-2xl py-3 text-[10px] font-black uppercase tracking-wider"
-                        >
-                            Add Member
-                        </button>
-                    </div>
-                </div>
-            )}
+            <TreeNodeAddModal
+                open={!!addModal}
+                person={addModal?.person}
+                step={addModal?.step || 'menu'}
+                addType={addModal?.addType}
+                familySpaceId={activeFamilySpaceId || getTreeWebviewContext().spaceId || ''}
+                onClose={() => setAddModal(null)}
+                onSelectType={(type) => setAddModal((prev) => ({ ...prev, step: 'form', addType: type }))}
+                onBack={() => setAddModal((prev) => ({ ...prev, step: 'menu', addType: null }))}
+                onSuccess={handleAddSuccess}
+            />
 
             {/* ── RIGHT SIDEBAR ── */}
             {/* Fixed to the viewport right edge — never moves regardless of tree state */}
@@ -1017,21 +994,28 @@ const FamilyTree = () => {
 
                     {/* ── Footer Actions ── */}
                     <div className="p-8 bg-white dark:bg-brand-darkCard border-t border-gray-50 dark:border-brand-darkBorder flex flex-col space-y-4 transition-colors shadow-inner">
-                        {/* Spouse / Child quick-add */}
-                        <div className="grid grid-cols-2 gap-3">
+                        {/* Spouse / parent / member quick-add */}
+                        <div className="grid grid-cols-3 gap-2">
                             <button
                                 onClick={() => handleAction('Add Spouse')}
-                                className="bg-brand-orange text-white rounded-2xl py-4 text-xs font-black uppercase tracking-widest flex items-center justify-center space-x-2 hover:bg-brand-orange/90 active:scale-95 transition-all shadow-lg"
+                                className="bg-brand-orange text-white rounded-2xl py-3 text-[10px] font-black uppercase tracking-widest flex flex-col items-center justify-center gap-1 hover:bg-brand-orange/90 active:scale-95 transition-all shadow-lg"
                             >
-                                <Heart size={16} strokeWidth={2.5} />
+                                <Heart size={14} strokeWidth={2.5} />
                                 <span>Spouse</span>
                             </button>
                             <button
-                                onClick={() => handleAction('Add Child')}
-                                className="bg-brand-orange text-white rounded-2xl py-4 text-xs font-black uppercase tracking-widest flex items-center justify-center space-x-2 hover:bg-brand-orange/90 active:scale-95 transition-all shadow-lg"
+                                onClick={() => handleAction('Add Parent')}
+                                className="bg-gray-900 text-white rounded-2xl py-3 text-[10px] font-black uppercase tracking-widest flex flex-col items-center justify-center gap-1 hover:bg-gray-800 active:scale-95 transition-all shadow-lg"
                             >
-                                <Baby size={16} strokeWidth={2.5} />
-                                <span>Child</span>
+                                <UserPlus size={14} strokeWidth={2.5} />
+                                <span>Parent</span>
+                            </button>
+                            <button
+                                onClick={() => handleAction('Add Member')}
+                                className="bg-pink-500 text-white rounded-2xl py-3 text-[10px] font-black uppercase tracking-widest flex flex-col items-center justify-center gap-1 hover:bg-pink-600 active:scale-95 transition-all shadow-lg"
+                            >
+                                <UserPlus size={14} strokeWidth={2.5} />
+                                <span>Member</span>
                             </button>
                         </div>
                         {/* Save / Undo */}
