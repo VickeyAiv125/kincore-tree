@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { getTreeWebviewContext } from '../../utils/treeWebviewNav';
 import {
     Plus, Baby, Shield, Lock, UserCheck, MapPin, FileText,
     Skull, Calendar, RefreshCw, Undo2, Save, Info, UserPlus, Search, GitMerge, Heart, ChevronUp,
@@ -537,11 +538,48 @@ const FamilyTree = () => {
             target_person_id: target.id, 
             target_name: target.name || getPersonName(target) 
         };
+
+        const { isAppView, spaceId, token: appToken } = getTreeWebviewContext();
+
+        if (isAppView && spaceId) {
+            const appSearch = appToken
+                ? `view=app&token=${encodeURIComponent(appToken)}`
+                : 'view=app';
+            switch (action) {
+                case 'Add Spouse':
+                    navigate(
+                        { pathname: `/family-tree/webview/${spaceId}/add-member`, search: appSearch },
+                        { state: { ...state, relationship_type: 'spouse' } }
+                    );
+                    break;
+                case 'Add Child':
+                    navigate(
+                        { pathname: `/family-tree/webview/${spaceId}/add-child`, search: appSearch },
+                        { state }
+                    );
+                    break;
+                case 'Add Parent':
+                    navigate(
+                        { pathname: `/family-tree/webview/${spaceId}/add-parent`, search: appSearch },
+                        { state }
+                    );
+                    break;
+                case 'Add Member':
+                    navigate(
+                        { pathname: `/family-tree/webview/${spaceId}/add-member`, search: appSearch },
+                        { state: { ...state, relationship_type: 'member' } }
+                    );
+                    break;
+                default: break;
+            }
+            return;
+        }
         
         switch (action) {
             case 'Add Spouse': navigate('/governance/add-spouse', { state }); break;
             case 'Add Child': navigate('/governance/add-child', { state }); break;
             case 'Add Parent': navigate('/governance/add-parents', { state }); break;
+            case 'Add Member': navigate('/owner/add-member', { state: { title: 'Add Member', ...state } }); break;
             default: break;
         }
     };
@@ -723,6 +761,37 @@ const FamilyTree = () => {
                     </div>
                 </div>
             </div>
+
+            {isAppView && selectedMember && (
+                <div className="fixed bottom-0 left-0 right-0 z-40 bg-white/95 dark:bg-brand-darkCard/95 border-t border-gray-100 dark:border-brand-darkBorder backdrop-blur-md p-4 pb-6 safe-area-bottom">
+                    <p className="text-[10px] font-black uppercase tracking-widest text-gray-400 mb-3 text-center">
+                        {selectedMember.name}
+                    </p>
+                    <div className="grid grid-cols-3 gap-2 max-w-lg mx-auto">
+                        <button
+                            type="button"
+                            onClick={() => handleAction('Add Child')}
+                            className="bg-brand-orange text-white rounded-2xl py-3 text-[10px] font-black uppercase tracking-wider"
+                        >
+                            Add Child
+                        </button>
+                        <button
+                            type="button"
+                            onClick={() => handleAction('Add Parent')}
+                            className="bg-gray-900 text-white rounded-2xl py-3 text-[10px] font-black uppercase tracking-wider"
+                        >
+                            Add Parent
+                        </button>
+                        <button
+                            type="button"
+                            onClick={() => handleAction('Add Member')}
+                            className="bg-pink-500 text-white rounded-2xl py-3 text-[10px] font-black uppercase tracking-wider"
+                        >
+                            Add Member
+                        </button>
+                    </div>
+                </div>
+            )}
 
             {/* ── RIGHT SIDEBAR ── */}
             {/* Fixed to the viewport right edge — never moves regardless of tree state */}

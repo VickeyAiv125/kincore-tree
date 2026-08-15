@@ -22,7 +22,7 @@ jobs:
 
       - name: Install & build (UAT API)
         env:
-          VITE_API_BASE_URL: https://uat.api.kincore.com/api
+          VITE_API_BASE_URL: https://uat-api.kincore.com/api
           # Anon key is publishable (same as local UAT build)
           VITE_SUPABASE_URL: https://fpzuqnpoksaeacedirns.supabase.co
           VITE_SUPABASE_ANON_KEY: sb_publishable_kPpwNv366jML2cE1HNtMaA_3ia5XAmF
@@ -37,7 +37,7 @@ jobs:
           chmod 600 ~/.ssh/uat_key
           ssh-keyscan -p "${{ secrets.UAT_SSH_PORT || 22 }}" -H "${{ secrets.UAT_HOST }}" >> ~/.ssh/known_hosts
 
-      - name: Rsync dist to uat.admin.kincore.com
+      - name: Rsync dist to uat-admin.kincore.com
         env:
           HOST: ${{ secrets.UAT_HOST }}
           USER: ${{ secrets.UAT_USER }}
@@ -45,4 +45,4 @@ jobs:
         run: |
           rsync -avz --delete \
             -e "ssh -i ~/.ssh/uat_key -p ${PORT} -o IdentitiesOnly=yes" \
-            ./dist/ "${USER}@${HOST}:/var/www/uat.admin.kincore.com/"
+            ./dist/ "${USER}@${HOST}:/var/www/uat-admin.kincore.com/"

@@ -169,10 +169,10 @@ const Layout = ({ children }) => {
         navigate('/');
     };
 
-    if (!user) return null;
+    const isAppView = new URLSearchParams(location.search).get('view') === 'app'
+        || location.pathname.includes('/family-tree/webview/');
 
-    // Check if we are in 'App' or 'WebView' mode
-    const isAppView = new URLSearchParams(location.search).get('view') === 'app';
+    if (!user && !isAppView) return null;
 
     if (isAppView) {
         return (

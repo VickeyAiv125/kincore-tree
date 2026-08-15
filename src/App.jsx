@@ -63,6 +63,7 @@ import EditLineage from './pages/owner/EditLineage';
 import AddChild from './pages/owner/AddChild';
 import AddParents from './pages/owner/AddParents';
 import AddSpouse from './pages/owner/AddSpouse';
+import AddTreeMember from './pages/owner/AddTreeMember';
 import System from './pages/owner/System';
 import BranchDashboard from './pages/branch/BranchDashboard';
 import BranchMembers from './pages/branch/BranchMembers';
@@ -211,6 +212,9 @@ function App() {
         <Route path="/migration-map/webview/:familySpaceId" element={<MigrationMapWebview />} />
         <Route path="/family-tree/webview" element={<FamilyTree />} />
         <Route path="/family-tree/webview/:familySpaceId" element={<FamilyTree />} />
+        <Route path="/family-tree/webview/:familySpaceId/add-child" element={<AddChild />} />
+        <Route path="/family-tree/webview/:familySpaceId/add-parent" element={<AddParents />} />
+        <Route path="/family-tree/webview/:familySpaceId/add-member" element={<AddTreeMember />} />
         <Route path="/kcc" element={<Layout><KCCCoin /></Layout>} />
         <Route path="/reports" element={<Layout><Reports /></Layout>} />
         <Route path="/policies" element={<Layout><Policies /></Layout>} />

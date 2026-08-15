@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { User, Calendar, Heart, MapPin, X, Plus, BookOpen, GraduationCap, Map } from 'lucide-react';
+import { User, Calendar, Heart, MapPin, X, Plus, BookOpen, GraduationCap, Map, Mail } from 'lucide-react';
+import { getTreeWebviewContext, navigateAfterTreeFormSave } from '../../utils/treeWebviewNav';
 
 const API = import.meta.env.VITE_API_BASE_URL || `${import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api'}`;
 
@@ -47,10 +48,12 @@ const AddSpouse = () => {
     const navigate = useNavigate();
     const location = useLocation();
     const { target_person_id, target_name } = location.state || {};
+    const { isAppView, spaceId, token } = getTreeWebviewContext();
 
     const [formData, setFormData] = useState({
         first_name: '',
         last_name: '',
+        email: '',
         gender: 'Female',
         anniversary_date: '',
         place_of_marriage: '',
@@ -78,7 +81,9 @@ const AddSpouse = () => {
 
         setLoading(true);
         try {
-            const family_space_id = localStorage.getItem('selected_family_id') || JSON.parse(localStorage.getItem('user'))?.family_id;
+            const family_space_id = spaceId
+                || localStorage.getItem('selected_family_id')
+                || JSON.parse(localStorage.getItem('user') || '{}')?.family_id;
             
             const res = await fetch(`${API}/clantree/add-member`, {
                 method: 'POST',
@@ -96,7 +101,11 @@ const AddSpouse = () => {
 
             if (!res.ok) throw new Error('Failed to add spouse');
 
-            navigate('/owner/family-tree');
+            if (isAppView) {
+                navigateAfterTreeFormSave(navigate, spaceId, token);
+            } else {
+                navigate('/owner/family-tree');
+            }
         } catch (err) {
             console.error(err);
             alert('Error adding spouse: ' + err.message);
@@ -122,6 +131,7 @@ const AddSpouse = () => {
                     <PremiumInput label="First Name" name="first_name" icon={User} placeholder="Enter first name" value={formData.first_name} onChange={handleChange} />
                     <PremiumInput label="Last Name" name="last_name" icon={User} placeholder="Enter last name" value={formData.last_name} onChange={handleChange} />
                 </div>
+                <PremiumInput label="Email" name="email" type="email" icon={Mail} placeholder="member@email.com (optional)" value={formData.email} onChange={handleChange} />
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-8">
                     <PremiumInput label="Marriage Date" name="anniversary_date" icon={Heart} placeholder="MM/DD/YYYY" value={formData.anniversary_date} onChange={handleChange} />
