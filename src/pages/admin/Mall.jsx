@@ -6,6 +6,7 @@ const PH_BASE = 'https://api.plenorhub.com/api/v1/integration';
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 const getToken = () => localStorage.getItem('token');
+const apiBase = () => (import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api').replace(/\/$/, '');
 const getFamilyId = () => {
     const u = JSON.parse(localStorage.getItem('user') || '{}');
     return localStorage.getItem('selected_family_id') || u?.family_space_id || u?.family_id;
@@ -283,8 +284,8 @@ const ListingModal = ({ isOpen, onClose, onSuccess, showToast, initialData = nul
         try {
             const familyId = getFamilyId();
             const url = initialData 
-                ? `${import.meta.env.VITE_API_BASE_URL || `${import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api'}`}/families/${familyId}/marketplace/${initialData.id}`
-                : `${import.meta.env.VITE_API_BASE_URL || `${import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api'}`}/families/${familyId}/marketplace`;
+                ? `${apiBase()}/families/${familyId}/marketplace/${initialData.id}`
+                : `${apiBase()}/families/${familyId}/marketplace`;
             
             const method = initialData ? 'PATCH' : 'POST';
             
@@ -389,6 +390,7 @@ const DeleteConfirmModal = ({ isOpen, onClose, onConfirm, loading, title }) => {
 // ─── Main Component ──────────────────────────────────────────────────────────
 const Mall = () => {
     const [activeTab, setActiveTab] = useState('p2p');
+    const [products, setProducts] = useState([]);
     const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
     const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
     const [deleteData, setDeleteData] = useState(null);
@@ -421,11 +423,15 @@ const Mall = () => {
 
     const fetchP2P = useCallback(async () => {
         const familyId = getFamilyId();
-        if (!familyId) return;
+        if (!familyId) {
+            setP2pError('Select a family space first, then open Mall.');
+            setP2pListings([]);
+            return;
+        }
         setP2pLoading(true);
         setP2pError(null);
         try {
-            const res = await fetch(`${import.meta.env.VITE_API_BASE_URL || `${import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api'}`}/families/${familyId}/marketplace/pending`, {
+            const res = await fetch(`${apiBase()}/families/${familyId}/marketplace/pending`, {
                 headers: { Authorization: `Bearer ${getToken()}` }
             });
             const data = await res.json();
@@ -444,7 +450,7 @@ const Mall = () => {
         const familyId = getFamilyId();
         setActionLoading(true);
         try {
-            const res = await fetch(`${import.meta.env.VITE_API_BASE_URL || `${import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api'}`}/families/${familyId}/marketplace/${listingId}/${action}`, {
+            const res = await fetch(`${apiBase()}/families/${familyId}/marketplace/${listingId}/${action}`, {
                 method: 'PATCH',
                 headers: { Authorization: `Bearer ${getToken()}` }
             });
@@ -466,7 +472,7 @@ const Mall = () => {
         const familyId = getFamilyId();
         setActionLoading(true);
         try {
-            const res = await fetch(`${import.meta.env.VITE_API_BASE_URL || `${import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api'}`}/families/${familyId}/marketplace/${deleteData.id}`, {
+            const res = await fetch(`${apiBase()}/families/${familyId}/marketplace/${deleteData.id}`, {
                 method: 'DELETE',
                 headers: { Authorization: `Bearer ${getToken()}` }
             });
@@ -557,7 +563,7 @@ const Mall = () => {
     // ─────────────────────────────────────────────────────────────────────────
     return (
         <div className="flex flex-col">
-            <DeleteConfirmModal isOpen={isDeleteModalOpen} onClose={() => { setIsDeleteModalOpen(false); setDeleteData(null); }} onConfirm={handleDelete} loading={actionLoading} title={deleteData?.name} />
+            <DeleteConfirmModal isOpen={isDeleteModalOpen} onClose={() => { setIsDeleteModalOpen(false); setDeleteData(null); }} onConfirm={handleDelete} loading={actionLoading} title={deleteData?.title} />
             <ListingModal isOpen={isCreateModalOpen} onClose={() => { setIsCreateModalOpen(false); setEditData(null); }} onSuccess={fetchP2P} showToast={showToast} initialData={editData} />
 
             {/* Toast */}
@@ -576,6 +582,22 @@ const Mall = () => {
                     <h1 className="text-4xl font-extrabold text-gray-900 dark:text-brand-darkText">
                         Product Catalog
                     </h1>
+                    <div className="flex rounded-2xl border border-gray-100 dark:border-brand-darkBorder overflow-hidden">
+                        <button
+                            type="button"
+                            onClick={() => setActiveTab('p2p')}
+                            className={`px-4 py-2 text-[10px] font-black uppercase tracking-widest ${activeTab === 'p2p' ? 'bg-brand-orange text-white' : 'bg-white dark:bg-brand-darkCard text-gray-500'}`}
+                        >
+                            Family P2P
+                        </button>
+                        <button
+                            type="button"
+                            onClick={() => setActiveTab('catalog')}
+                            className={`px-4 py-2 text-[10px] font-black uppercase tracking-widest ${activeTab === 'catalog' ? 'bg-brand-orange text-white' : 'bg-white dark:bg-brand-darkCard text-gray-500'}`}
+                        >
+                            PlenorHub Catalog
+                        </button>
+                    </div>
                 </div>
             </header>
 
@@ -739,6 +761,80 @@ const Mall = () => {
                                     </div>
                                 </div>
                             </div>
+                        </div>
+                    )}
+                </div>
+            )}
+
+            {activeTab === 'catalog' && (
+                <div className="flex flex-col">
+                    <div className="flex flex-wrap gap-3 mb-6 items-center">
+                        <form onSubmit={handleSearchSubmit} className="flex gap-2 flex-1 min-w-[220px] max-w-sm">
+                            <input
+                                type="text"
+                                value={searchInput}
+                                onChange={(e) => setSearchInput(e.target.value)}
+                                placeholder="Search PlenorHub products..."
+                                className="flex-1 px-4 py-2.5 rounded-xl bg-white dark:bg-brand-darkCard border border-gray-100 dark:border-brand-darkBorder text-sm font-medium text-gray-800 dark:text-brand-darkText placeholder-gray-300 dark:placeholder-gray-600 focus:outline-none focus:ring-2 focus:ring-brand-orange/20 transition-all"
+                            />
+                            <button type="submit" className="px-4 py-2.5 rounded-xl bg-brand-orange text-white text-[10px] font-black uppercase tracking-widest hover:opacity-90">
+                                Search
+                            </button>
+                        </form>
+                        <select
+                            value={category}
+                            onChange={(e) => handleCategoryChange(e.target.value)}
+                            className="px-4 py-2.5 rounded-xl bg-white dark:bg-brand-darkCard border border-gray-100 dark:border-brand-darkBorder text-sm font-medium"
+                        >
+                            <option value="">All Categories</option>
+                            {categories.map((cat) => (
+                                <option key={cat.id || cat.slug || cat.name} value={cat.slug || cat.name}>
+                                    {cat.name || cat.slug}
+                                </option>
+                            ))}
+                        </select>
+                    </div>
+                    {loading && (
+                        <div className="flex items-center justify-center py-16">
+                            <Loader2 className="animate-spin text-brand-orange" size={32} />
+                        </div>
+                    )}
+                    {error && !loading && (
+                        <div className="py-10 text-center">
+                            <p className="text-sm font-bold text-rose-500 mb-3">{error}</p>
+                            <button onClick={fetchProducts} className="text-[10px] font-black text-brand-orange uppercase tracking-widest hover:underline">Retry</button>
+                        </div>
+                    )}
+                    {!loading && !error && (
+                        <div className="bg-white dark:bg-brand-darkCard rounded-3xl border border-gray-100 dark:border-brand-darkBorder shadow-sm overflow-hidden p-6 md:p-8">
+                            <div className="overflow-x-auto">
+                                <table className="w-full text-left min-w-[760px]">
+                                    <thead>
+                                        <tr className="border-b border-gray-100 dark:border-brand-darkBorder text-[10px] font-extrabold text-gray-400 uppercase tracking-widest">
+                                            <th className="pb-6 pr-4 pl-1">Product</th>
+                                            <th className="pb-6 px-4">Merchant</th>
+                                            <th className="pb-6 px-4">Category</th>
+                                            <th className="pb-6 px-4">Price</th>
+                                            <th className="pb-6 px-4">Stock</th>
+                                            <th className="pb-6 pl-4 pr-1">Actions</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {products.length > 0
+                                            ? products.map((product) => (
+                                                <ProductRow key={product.id || product.slug} product={product} />
+                                            ))
+                                            : (
+                                                <tr>
+                                                    <td colSpan={6} className="py-20 text-center text-gray-400 font-bold text-xs uppercase tracking-widest">
+                                                        No catalog products
+                                                    </td>
+                                                </tr>
+                                            )}
+                                    </tbody>
+                                </table>
+                            </div>
+                            <Pagination meta={meta} onPageChange={handlePageChange} />
                         </div>
                     )}
                 </div>

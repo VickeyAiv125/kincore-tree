@@ -1,125 +1,36 @@
-import React, { useEffect } from 'react';
+import React, { Suspense, useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate, useNavigate, useLocation } from 'react-router-dom';
 import { supabase } from './lib/supabase';
 import Login from './pages/Login';
 import ForgotPassword from './pages/ForgotPassword';
 import AuthCallback from './pages/AuthCallback';
 import AcceptInvite from './pages/AcceptInvite';
-
-import AdminDashboard from './pages/admin/AdminDashboard';
-import GovernanceRoles from './pages/admin/GovernanceRoles';
-import AddRole from './pages/admin/AddRole';
-import ContentModeration from './pages/admin/ContentModeration';
-import LineageRegistry from './pages/admin/LineageRegistry';
-import RestrictAuthor from './pages/admin/RestrictAuthor';
-import MemberRegistry from './pages/admin/MemberRegistry';
-import EventsEngagement from './pages/admin/EventsEngagement';
-import EventDetails from './pages/admin/EventDetails';
-import CreateEvent from './pages/admin/CreateEvent';
 import { EventProvider } from './context/EventContext';
-import Mall from './pages/admin/Mall';
-import MediaRepository from './pages/admin/MediaRepository';
-import Subscription from './pages/admin/Subscription';
-import PlanFeatures from './pages/admin/PlanFeatures';
-import MigrationMap from './pages/admin/MigrationMap';
-import CreateMigrationPoint from './pages/admin/CreateMigrationPoint';
-import MigrationMapWebview from './pages/admin/MigrationMapWebview';
-import KCCCoin from './pages/admin/KCCCoin';
-import Reports from './pages/admin/Reports';
-import Policies from './pages/admin/Policies';
-import Support from './pages/admin/Support';
-import Settings from './pages/admin/Settings';
-import BranchApprovalsAdmin from './pages/owner/BranchApprovals';
-import MemberRequests from './pages/owner/MemberRequests';
-import SecretSantaPreview from './pages/admin/SecretSantaPreview';
-import SecretSantaLocked from './pages/admin/SecretSantaLocked';
-
-
-import OwnerDashboard from './pages/owner/OwnerDashboard';
-import GlobalMembers from './pages/owner/GlobalMembers';
-import CreateBranch from './pages/owner/CreateBranch';
 import { BranchProvider } from './context/BranchContext';
 import { CouncilProvider } from './context/CouncilContext';
-import GlobalBranches from './pages/owner/GlobalBranches';
-import FamilyTree from './pages/owner/FamilyTree';
-import AddMember from './pages/owner/AddMember';
-import FamilyEvent from './pages/owner/FamilyEvent';
-import CreateEventInvitee from './pages/owner/CreateEventInvitee';
-import PrivacySettings from './pages/owner/PrivacySettings';
-import GovernancePolicy from './pages/owner/GovernancePolicy';
-import CustomLabels from './pages/owner/CustomLabels';
-import AuditLogs from './pages/owner/AuditLogs';
-import CouncilDashboard from './pages/council/CouncilDashboard';
-import CouncilMembers from './pages/council/CouncilMembers';
-import CouncilApprovals from './pages/council/CouncilApprovals';
-import CouncilCreateBranch from './pages/council/CouncilCreateBranch';
-import CouncilBranches from './pages/council/CouncilBranches';
-import CouncilPrivacy from './pages/council/CouncilPrivacy';
-import CouncilGovernance from './pages/council/CouncilGovernance';
-import EditMember from './pages/owner/EditMember';
-import EditBranch from './pages/owner/EditBranch';
-import ViewProfile from './pages/owner/ViewProfile';
-import EditLineage from './pages/owner/EditLineage';
-import AddChild from './pages/owner/AddChild';
-import AddParents from './pages/owner/AddParents';
-import AddSpouse from './pages/owner/AddSpouse';
-import AddTreeMember from './pages/owner/AddTreeMember';
-import System from './pages/owner/System';
-import BranchDashboard from './pages/branch/BranchDashboard';
-import BranchMembers from './pages/branch/BranchMembers';
-import BranchAddMember from './pages/branch/BranchAddMember';
-import BranchEditMember from './pages/branch/BranchEditMember';
-import BranchViewMember from './pages/branch/BranchViewMember';
-import BranchEvents from './pages/branch/BranchEvents';
-import BranchCreateEvent from './pages/branch/CreateEvent';
-import BranchApprovals from './pages/branch/BranchApprovals';
-import BranchFamilyTree from './pages/branch/BranchFamilyTree';
-import EditEvent from './pages/owner/EditEvent';
-import Layout from './components/layout/Layout';
-import BusinessLayout from './components/layout/BusinessLayout';
 import ProtectedRoute from './components/auth/ProtectedRoute';
 import { BusinessProvider } from './context/BusinessContext';
-import Unauthorized from './pages/Unauthorized';
-import DashboardOverview from './pages/business/DashboardOverview';
-import FamilySpaces from './pages/business/FamilySpaces';
-import NewFamilySpace from './pages/business/NewFamilySpace';
-import FamilySpaceRequests from './pages/admin/FamilySpaceRequests';
-import Billing from './pages/business/Billing';
-import BillingCreatePlan from './pages/business/BillingCreatePlan';
-import RefundFlow from './pages/business/RefundFlow';
-import Operations from './pages/business/Operations';
-import KCCGovernance from './pages/business/KCCGovernance';
-import Ads from './pages/business/Ads';
-import Safety from './pages/business/Safety';
-import SupportTickets from './pages/business/SupportTickets';
-import Config from './pages/business/Config';
-import Reliability from './pages/business/Reliability';
-import Audit from './pages/business/Audit';
+import * as P from './routes/lazyPages';
 
-// DevOps Pages
-import DevOpsDashboard from './pages/devops/DevOpsDashboard';
-import DevOpsSystemConfig from './pages/devops/SystemConfig';
-import JobControl from './pages/devops/JobControl';
-import IncidentManagement from './pages/devops/IncidentManagement';
-import Monitoring from './pages/devops/Monitoring';
-import LogsExplorer from './pages/devops/LogsExplorer';
-
-// Auditor Pages
-import AuditorDashboard from './pages/auditor/AuditorDashboard';
-import BillingView from './pages/auditor/BillingView';
-import AuditorAuditLogs from './pages/auditor/AuditLogs';
-import AbuseWorkflow from './pages/auditor/AbuseWorkflow';
-import PublicEventDetail from './pages/PublicEventDetail';
-
-
-
-
+const PageLoader = () => (
+  <div className="min-h-screen bg-[#FFF9F1] dark:bg-brand-darkBg flex items-center justify-center">
+    <div className="text-center">
+      <p className="text-brand-orange text-2xl font-bold mb-2">Kincore</p>
+      <p className="text-sm text-gray-500 dark:text-gray-400">Loading…</p>
+    </div>
+  </div>
+);
 function OAuthSync() {
   const navigate = useNavigate();
   const location = useLocation();
 
   useEffect(() => {
     if (location.pathname.includes('/accept-invite') || location.pathname.includes('/reset-password') || location.pathname.includes('/auth/callback')) {
+      return;
+    }
+
+    const hasOAuthParams = location.hash.includes('access_token') || location.search.includes('code');
+    if (location.pathname === '/' && !hasOAuthParams && !localStorage.getItem('token')) {
       return;
     }
 
@@ -183,6 +94,7 @@ function App() {
     <CouncilProvider>
       <Router>
         <OAuthSync />
+        <Suspense fallback={<PageLoader />}>
         <Routes>
         <Route path="/" element={<Login />} />
         <Route path="/auth/callback" element={<AuthCallback />} />
@@ -190,99 +102,99 @@ function App() {
         <Route path="/accept-invite" element={<AcceptInvite />} />
 
         {/* Family Hub Routes */}
-        <Route path="/dashboard" element={<Layout><AdminDashboard /></Layout>} />
-        <Route path="/governance" element={<Layout><GovernanceRoles /></Layout>} />
-        <Route path="/governance/add-role" element={<Layout><AddRole /></Layout>} />
-        <Route path="/content-moderation" element={<Layout><ContentModeration /></Layout>} />
-        <Route path="/lineage-registry" element={<Layout><LineageRegistry /></Layout>} />
+        <Route path="/dashboard" element={<P.Layout><P.AdminDashboard /></P.Layout>} />
+        <Route path="/governance" element={<P.Layout><P.GovernanceRoles /></P.Layout>} />
+        <Route path="/governance/add-role" element={<P.Layout><P.AddRole /></P.Layout>} />
+        <Route path="/content-moderation" element={<P.Layout><P.ContentModeration /></P.Layout>} />
+        <Route path="/lineage-registry" element={<P.Layout><P.LineageRegistry /></P.Layout>} />
 
-        <Route path="/restrict-author" element={<Layout><RestrictAuthor /></Layout>} />
-        <Route path="/member-registry" element={<Layout><MemberRegistry /></Layout>} />
-        <Route path="/events" element={<Layout><EventsEngagement /></Layout>} />
-        <Route path="/admin/events/:id" element={<Layout><EventDetails /></Layout>} />
-        <Route path="/events/create" element={<EventProvider><Layout><CreateEvent /></Layout></EventProvider>} />
-        <Route path="/events/secret-santa/preview" element={<EventProvider><Layout><SecretSantaPreview /></Layout></EventProvider>} />
-        <Route path="/events/secret-santa/locked" element={<EventProvider><Layout><SecretSantaLocked /></Layout></EventProvider>} />
-        <Route path="/mall" element={<Layout><Mall /></Layout>} />
-        <Route path="/media" element={<Layout><MediaRepository /></Layout>} />
-        <Route path="/subscription" element={<Layout><Subscription /></Layout>} />
-        <Route path="/subscription/features" element={<Layout><PlanFeatures /></Layout>} />
-        <Route path="/migration" element={<Layout><MigrationMap /></Layout>} />
-        <Route path="/migration/add" element={<Layout><CreateMigrationPoint /></Layout>} />
-        <Route path="/migration-map/webview/:familySpaceId" element={<MigrationMapWebview />} />
-        <Route path="/family-tree/webview" element={<FamilyTree />} />
-        <Route path="/family-tree/webview/:familySpaceId" element={<FamilyTree />} />
-        <Route path="/family-tree/webview/:familySpaceId/add-child" element={<AddChild />} />
-        <Route path="/family-tree/webview/:familySpaceId/add-parent" element={<AddParents />} />
-        <Route path="/family-tree/webview/:familySpaceId/add-member" element={<AddTreeMember />} />
-        <Route path="/kcc" element={<Layout><KCCCoin /></Layout>} />
-        <Route path="/reports" element={<Layout><Reports /></Layout>} />
-        <Route path="/policies" element={<Layout><Policies /></Layout>} />
-        <Route path="/support" element={<Layout><Support /></Layout>} />
-        <Route path="/settings" element={<Layout><Settings /></Layout>} />
+        <Route path="/restrict-author" element={<P.Layout><P.RestrictAuthor /></P.Layout>} />
+        <Route path="/member-registry" element={<P.Layout><P.MemberRegistry /></P.Layout>} />
+        <Route path="/events" element={<P.Layout><P.EventsEngagement /></P.Layout>} />
+        <Route path="/admin/events/:id" element={<P.Layout><P.EventDetails /></P.Layout>} />
+        <Route path="/events/create" element={<EventProvider><P.Layout><P.CreateEvent /></P.Layout></EventProvider>} />
+        <Route path="/events/secret-santa/preview" element={<EventProvider><P.Layout><P.SecretSantaPreview /></P.Layout></EventProvider>} />
+        <Route path="/events/secret-santa/locked" element={<EventProvider><P.Layout><P.SecretSantaLocked /></P.Layout></EventProvider>} />
+        <Route path="/mall" element={<P.Layout><P.Mall /></P.Layout>} />
+        <Route path="/media" element={<P.Layout><P.MediaRepository /></P.Layout>} />
+        <Route path="/subscription" element={<P.Layout><P.Subscription /></P.Layout>} />
+        <Route path="/subscription/features" element={<P.Layout><P.PlanFeatures /></P.Layout>} />
+        <Route path="/migration" element={<P.Layout><P.MigrationMap /></P.Layout>} />
+        <Route path="/migration/add" element={<P.Layout><P.CreateMigrationPoint /></P.Layout>} />
+        <Route path="/migration-map/webview/:familySpaceId" element={<P.MigrationMapWebview />} />
+        <Route path="/family-tree/webview" element={<P.FamilyTree />} />
+        <Route path="/family-tree/webview/:familySpaceId" element={<P.FamilyTree />} />
+        <Route path="/family-tree/webview/:familySpaceId/add-child" element={<P.AddChild />} />
+        <Route path="/family-tree/webview/:familySpaceId/add-parent" element={<P.AddParents />} />
+        <Route path="/family-tree/webview/:familySpaceId/add-member" element={<P.AddTreeMember />} />
+        <Route path="/kcc" element={<P.Layout><P.KCCCoin /></P.Layout>} />
+        <Route path="/reports" element={<P.Layout><P.Reports /></P.Layout>} />
+        <Route path="/policies" element={<P.Layout><P.Policies /></P.Layout>} />
+        <Route path="/support" element={<P.Layout><P.Support /></P.Layout>} />
+        <Route path="/settings" element={<P.Layout><P.Settings /></P.Layout>} />
 
         {/* Owner Dashboard Routes */}
-        <Route path="/owner/dashboard" element={<Layout><OwnerDashboard /></Layout>} />
-        <Route path="/owner/branch-approvals" element={<Layout><BranchApprovalsAdmin /></Layout>} />
-        <Route path="/owner/member-requests" element={<Layout><MemberRequests /></Layout>} />
-        <Route path="/owner/members" element={<Layout><GlobalMembers /></Layout>} />
-        <Route path="/owner/members/edit/:id" element={<Layout><EditMember /></Layout>} />
-        <Route path="/owner/branches" element={<Layout><GlobalBranches /></Layout>} />
-        <Route path="/owner/branches/create" element={<BranchProvider><Layout><CreateBranch /></Layout></BranchProvider>} />
-        <Route path="/owner/branches/edit/:id" element={<BranchProvider><Layout><EditBranch /></Layout></BranchProvider>} />
+        <Route path="/owner/dashboard" element={<P.Layout><P.OwnerDashboard /></P.Layout>} />
+        <Route path="/owner/branch-approvals" element={<P.Layout><P.BranchApprovalsAdmin /></P.Layout>} />
+        <Route path="/owner/member-requests" element={<P.Layout><P.MemberRequests /></P.Layout>} />
+        <Route path="/owner/members" element={<P.Layout><P.GlobalMembers /></P.Layout>} />
+        <Route path="/owner/members/edit/:id" element={<P.Layout><P.EditMember /></P.Layout>} />
+        <Route path="/owner/branches" element={<P.Layout><P.GlobalBranches /></P.Layout>} />
+        <Route path="/owner/branches/create" element={<BranchProvider><P.Layout><P.CreateBranch /></P.Layout></BranchProvider>} />
+        <Route path="/owner/branches/edit/:id" element={<BranchProvider><P.Layout><P.EditBranch /></P.Layout></BranchProvider>} />
         <Route path="/owner/branches/edit" element={<Navigate to="/owner/branches" replace />} />
-        <Route path="/owner/family-tree" element={<Layout><FamilyTree /></Layout>} />
-        <Route path="/owner/add-member" element={<Layout><AddMember /></Layout>} />
-        <Route path="/owner/events" element={<Layout><FamilyEvent /></Layout>} />
-        <Route path="/owner/events/create" element={<Layout><CreateEventInvitee /></Layout>} />
-        <Route path="/owner/events/edit/:id" element={<Layout><EditEvent /></Layout>} />
-        <Route path="/owner/privacy" element={<Layout><PrivacySettings /></Layout>} />
-        <Route path="/owner/governance" element={<Layout><GovernancePolicy /></Layout>} />
-        <Route path="/owner/custom-labels" element={<Layout><CustomLabels /></Layout>} />
-        <Route path="/owner/audit-logs" element={<Layout><AuditLogs /></Layout>} />
-        <Route path="/governance/view-profile" element={<Layout><ViewProfile /></Layout>} />
-        <Route path="/governance/edit-lineage" element={<Layout><EditLineage /></Layout>} />
-        <Route path="/governance/add-child" element={<Layout><AddChild /></Layout>} />
-        <Route path="/governance/add-parents" element={<Layout><AddParents /></Layout>} />
-        <Route path="/governance/add-spouse" element={<Layout><AddSpouse /></Layout>} />
+        <Route path="/owner/family-tree" element={<P.Layout><P.FamilyTree /></P.Layout>} />
+        <Route path="/owner/add-member" element={<P.Layout><P.AddMember /></P.Layout>} />
+        <Route path="/owner/events" element={<P.Layout><P.FamilyEvent /></P.Layout>} />
+        <Route path="/owner/events/create" element={<P.Layout><P.CreateEventInvitee /></P.Layout>} />
+        <Route path="/owner/events/edit/:id" element={<P.Layout><P.EditEvent /></P.Layout>} />
+        <Route path="/owner/privacy" element={<P.Layout><P.PrivacySettings /></P.Layout>} />
+        <Route path="/owner/governance" element={<P.Layout><P.GovernancePolicy /></P.Layout>} />
+        <Route path="/owner/custom-labels" element={<P.Layout><P.CustomLabels /></P.Layout>} />
+        <Route path="/owner/audit-logs" element={<P.Layout><P.AuditLogs /></P.Layout>} />
+        <Route path="/governance/view-profile" element={<P.Layout><P.ViewProfile /></P.Layout>} />
+        <Route path="/governance/edit-lineage" element={<P.Layout><P.EditLineage /></P.Layout>} />
+        <Route path="/governance/add-child" element={<P.Layout><P.AddChild /></P.Layout>} />
+        <Route path="/governance/add-parents" element={<P.Layout><P.AddParents /></P.Layout>} />
+        <Route path="/governance/add-spouse" element={<P.Layout><P.AddSpouse /></P.Layout>} />
 
         {/* Family Council Routes */}
-        <Route path="/council/dashboard" element={<Layout><CouncilDashboard /></Layout>} />
-        <Route path="/council/members" element={<Layout><CouncilMembers /></Layout>} />
-        <Route path="/council/members/add" element={<Layout><AddMember /></Layout>} />
-        <Route path="/council/approvals" element={<Layout><CouncilApprovals /></Layout>} />
-        <Route path="/council/branches" element={<Layout><CouncilBranches /></Layout>} />
-        <Route path="/council/branches/create" element={<BranchProvider><Layout><CouncilCreateBranch /></Layout></BranchProvider>} />
-        <Route path="/council/branches/edit/:id" element={<BranchProvider><Layout><EditBranch /></Layout></BranchProvider>} />
-        <Route path="/council/family-tree" element={<Layout><FamilyTree /></Layout>} />
-        <Route path="/council/events/create" element={<EventProvider><Layout><CreateEvent /></Layout></EventProvider>} />
-        <Route path="/council/events" element={<Layout><FamilyEvent /></Layout>} />
-        <Route path="/events/:id" element={<Layout><PublicEventDetail /></Layout>} />
-        <Route path="/council/privacy" element={<Layout><CouncilPrivacy /></Layout>} />
-        <Route path="/council/governance" element={<Layout><CouncilGovernance /></Layout>} />
+        <Route path="/council/dashboard" element={<P.Layout><P.CouncilDashboard /></P.Layout>} />
+        <Route path="/council/members" element={<P.Layout><P.CouncilMembers /></P.Layout>} />
+        <Route path="/council/members/add" element={<P.Layout><P.AddMember /></P.Layout>} />
+        <Route path="/council/approvals" element={<P.Layout><P.CouncilApprovals /></P.Layout>} />
+        <Route path="/council/branches" element={<P.Layout><P.CouncilBranches /></P.Layout>} />
+        <Route path="/council/branches/create" element={<BranchProvider><P.Layout><P.CouncilCreateBranch /></P.Layout></BranchProvider>} />
+        <Route path="/council/branches/edit/:id" element={<BranchProvider><P.Layout><P.EditBranch /></P.Layout></BranchProvider>} />
+        <Route path="/council/family-tree" element={<P.Layout><P.FamilyTree /></P.Layout>} />
+        <Route path="/council/events/create" element={<EventProvider><P.Layout><P.CreateEvent /></P.Layout></EventProvider>} />
+        <Route path="/council/events" element={<P.Layout><P.FamilyEvent /></P.Layout>} />
+        <Route path="/events/:id" element={<P.Layout><P.PublicEventDetail /></P.Layout>} />
+        <Route path="/council/privacy" element={<P.Layout><P.CouncilPrivacy /></P.Layout>} />
+        <Route path="/council/governance" element={<P.Layout><P.CouncilGovernance /></P.Layout>} />
 
         {/* Branch Manager Routes */}
-        <Route path="/branch/dashboard" element={<Layout><BranchDashboard /></Layout>} />
-        <Route path="/branch/members" element={<Layout><BranchMembers /></Layout>} />
-        <Route path="/branch/members/add" element={<Layout><BranchAddMember /></Layout>} />
-        <Route path="/branch/members/edit/:memberId" element={<Layout><BranchEditMember /></Layout>} />
-        <Route path="/branch/members/view/:memberId" element={<Layout><BranchViewMember /></Layout>} />
+        <Route path="/branch/dashboard" element={<P.Layout><P.BranchDashboard /></P.Layout>} />
+        <Route path="/branch/members" element={<P.Layout><P.BranchMembers /></P.Layout>} />
+        <Route path="/branch/members/add" element={<P.Layout><P.BranchAddMember /></P.Layout>} />
+        <Route path="/branch/members/edit/:memberId" element={<P.Layout><P.BranchEditMember /></P.Layout>} />
+        <Route path="/branch/members/view/:memberId" element={<P.Layout><P.BranchViewMember /></P.Layout>} />
 
-        <Route path="/branch/events" element={<Layout><BranchEvents /></Layout>} />
-        <Route path="/branch/create-event" element={<Layout><BranchCreateEvent /></Layout>} />
-        <Route path="/branch/approvals" element={<Layout><BranchApprovals /></Layout>} />
-        <Route path="/branch/family-tree" element={<Layout><BranchFamilyTree /></Layout>} />
+        <Route path="/branch/events" element={<P.Layout><P.BranchEvents /></P.Layout>} />
+        <Route path="/branch/create-event" element={<P.Layout><P.BranchCreateEvent /></P.Layout>} />
+        <Route path="/branch/approvals" element={<P.Layout><P.BranchApprovals /></P.Layout>} />
+        <Route path="/branch/family-tree" element={<P.Layout><P.BranchFamilyTree /></P.Layout>} />
 
 
-        <Route path="/owner/system" element={<Layout><System /></Layout>} />
-        <Route path="/audit-logs" element={<Layout><AuditLogs /></Layout>} />
+        <Route path="/owner/system" element={<P.Layout><P.System /></P.Layout>} />
+        <Route path="/audit-logs" element={<P.Layout><P.AuditLogs /></P.Layout>} />
 
         {/* Business Dashboard Routes */}
         <Route
           path="/business/dashboard"
           element={
             <ProtectedRoute allowedRole="business">
-              <BusinessLayout><DashboardOverview /></BusinessLayout>
+              <P.BusinessLayout><P.DashboardOverview /></P.BusinessLayout>
             </ProtectedRoute>
           }
         />
@@ -291,7 +203,7 @@ function App() {
           element={
             <ProtectedRoute allowedRole="business">
               <BusinessProvider>
-                <BusinessLayout><FamilySpaces /></BusinessLayout>
+                <P.BusinessLayout><P.FamilySpaces /></P.BusinessLayout>
               </BusinessProvider>
             </ProtectedRoute>
           }
@@ -301,7 +213,7 @@ function App() {
           element={
             <ProtectedRoute allowedRole="business">
               <BusinessProvider>
-                <BusinessLayout><NewFamilySpace /></BusinessLayout>
+                <P.BusinessLayout><P.NewFamilySpace /></P.BusinessLayout>
               </BusinessProvider>
             </ProtectedRoute>
           } 
@@ -311,7 +223,7 @@ function App() {
           element={
             <ProtectedRoute allowedRole="business">
               <BusinessProvider>
-                <BusinessLayout><FamilySpaceRequests /></BusinessLayout>
+                <P.BusinessLayout><P.FamilySpaceRequests /></P.BusinessLayout>
               </BusinessProvider>
             </ProtectedRoute>
           } 
@@ -321,7 +233,7 @@ function App() {
           element={
             <ProtectedRoute allowedRole="business">
               <BusinessProvider>
-                <BusinessLayout><Billing /></BusinessLayout>
+                <P.BusinessLayout><P.Billing /></P.BusinessLayout>
               </BusinessProvider>
             </ProtectedRoute>
           }
@@ -331,7 +243,7 @@ function App() {
           element={
             <ProtectedRoute allowedRole="business">
               <BusinessProvider>
-                <BusinessLayout><BillingCreatePlan /></BusinessLayout>
+                <P.BusinessLayout><P.BillingCreatePlan /></P.BusinessLayout>
               </BusinessProvider>
             </ProtectedRoute>
           }
@@ -341,7 +253,7 @@ function App() {
           element={
             <ProtectedRoute allowedRole="business">
               <BusinessProvider>
-                <BusinessLayout><RefundFlow /></BusinessLayout>
+                <P.BusinessLayout><P.RefundFlow /></P.BusinessLayout>
               </BusinessProvider>
             </ProtectedRoute>
           }
@@ -350,7 +262,7 @@ function App() {
           path="/business/operations"
           element={
             <ProtectedRoute allowedRole="business">
-              <BusinessLayout><Operations /></BusinessLayout>
+              <P.BusinessLayout><P.Operations /></P.BusinessLayout>
             </ProtectedRoute>
           }
         />
@@ -358,7 +270,7 @@ function App() {
           path="/business/governance"
           element={
             <ProtectedRoute allowedRole="business">
-              <BusinessLayout><KCCGovernance /></BusinessLayout>
+              <P.BusinessLayout><P.KCCGovernance /></P.BusinessLayout>
             </ProtectedRoute>
           }
         />
@@ -366,7 +278,7 @@ function App() {
           path="/business/ads"
           element={
             <ProtectedRoute allowedRole="business">
-              <BusinessLayout><Ads /></BusinessLayout>
+              <P.BusinessLayout><P.Ads /></P.BusinessLayout>
             </ProtectedRoute>
           }
         />
@@ -374,7 +286,7 @@ function App() {
           path="/business/safety"
           element={
             <ProtectedRoute allowedRole="business">
-              <BusinessLayout><Safety /></BusinessLayout>
+              <P.BusinessLayout><P.Safety /></P.BusinessLayout>
             </ProtectedRoute>
           }
         />
@@ -383,7 +295,7 @@ function App() {
           element={
             <ProtectedRoute allowedRole="business">
               <BusinessProvider>
-                <BusinessLayout><Config /></BusinessLayout>
+                <P.BusinessLayout><P.Config /></P.BusinessLayout>
               </BusinessProvider>
             </ProtectedRoute>
           }
@@ -393,7 +305,7 @@ function App() {
           element={
             <ProtectedRoute allowedRole="business">
               <BusinessProvider>
-                <BusinessLayout><Config /></BusinessLayout>
+                <P.BusinessLayout><P.Config /></P.BusinessLayout>
               </BusinessProvider>
             </ProtectedRoute>
           }
@@ -402,7 +314,7 @@ function App() {
           path="/business/reliability"
           element={
             <ProtectedRoute allowedRole="business">
-              <BusinessLayout><Reliability /></BusinessLayout>
+              <P.BusinessLayout><P.Reliability /></P.BusinessLayout>
             </ProtectedRoute>
           }
         />
@@ -410,7 +322,7 @@ function App() {
           path="/business/audit"
           element={
             <ProtectedRoute allowedRole="business">
-              <BusinessLayout><Audit /></BusinessLayout>
+              <P.BusinessLayout><P.Audit /></P.BusinessLayout>
             </ProtectedRoute>
           }
         />
@@ -418,9 +330,9 @@ function App() {
           path="/business/support"
           element={
             <ProtectedRoute allowedRoles={['business_admin', 'super_admin']}>
-              <BusinessLayout>
-                <SupportTickets />
-              </BusinessLayout>
+              <P.BusinessLayout>
+                <P.SupportTickets />
+              </P.BusinessLayout>
             </ProtectedRoute>
           }
         />
@@ -430,7 +342,7 @@ function App() {
           path="/devops/dashboard"
           element={
             <ProtectedRoute allowedRole="devops">
-              <BusinessLayout><DevOpsDashboard /></BusinessLayout>
+              <P.BusinessLayout><P.DevOpsDashboard /></P.BusinessLayout>
             </ProtectedRoute>
           }
         />
@@ -438,7 +350,7 @@ function App() {
           path="/devops/incidents"
           element={
             <ProtectedRoute allowedRole="devops">
-              <BusinessLayout><IncidentManagement /></BusinessLayout>
+              <P.BusinessLayout><P.IncidentManagement /></P.BusinessLayout>
             </ProtectedRoute>
           }
         />
@@ -446,7 +358,7 @@ function App() {
           path="/devops/monitoring"
           element={
             <ProtectedRoute allowedRole="devops">
-              <BusinessLayout><Monitoring /></BusinessLayout>
+              <P.BusinessLayout><P.Monitoring /></P.BusinessLayout>
             </ProtectedRoute>
           }
         />
@@ -454,7 +366,7 @@ function App() {
           path="/devops/logs"
           element={
             <ProtectedRoute allowedRole="devops">
-              <BusinessLayout><LogsExplorer /></BusinessLayout>
+              <P.BusinessLayout><P.LogsExplorer /></P.BusinessLayout>
             </ProtectedRoute>
           }
         />
@@ -462,7 +374,7 @@ function App() {
           path="/devops/config"
           element={
             <ProtectedRoute allowedRole="devops">
-              <BusinessLayout><DevOpsSystemConfig /></BusinessLayout>
+              <P.BusinessLayout><P.DevOpsSystemConfig /></P.BusinessLayout>
             </ProtectedRoute>
           }
         />
@@ -470,7 +382,7 @@ function App() {
           path="/devops/jobs"
           element={
             <ProtectedRoute allowedRole="devops">
-              <BusinessLayout><JobControl /></BusinessLayout>
+              <P.BusinessLayout><P.JobControl /></P.BusinessLayout>
             </ProtectedRoute>
           }
         />
@@ -480,7 +392,7 @@ function App() {
           path="/auditor/dashboard"
           element={
             <ProtectedRoute allowedRole="auditor">
-              <BusinessLayout><AuditorDashboard /></BusinessLayout>
+              <P.BusinessLayout><P.AuditorDashboard /></P.BusinessLayout>
             </ProtectedRoute>
           }
         />
@@ -488,7 +400,7 @@ function App() {
           path="/auditor/billing"
           element={
             <ProtectedRoute allowedRole="auditor">
-              <BusinessLayout><BillingView /></BusinessLayout>
+              <P.BusinessLayout><P.BillingView /></P.BusinessLayout>
             </ProtectedRoute>
           }
         />
@@ -496,7 +408,7 @@ function App() {
           path="/auditor/audit"
           element={
             <ProtectedRoute allowedRole="auditor">
-              <BusinessLayout><AuditorAuditLogs /></BusinessLayout>
+              <P.BusinessLayout><P.AuditorAuditLogs /></P.BusinessLayout>
             </ProtectedRoute>
           }
         />
@@ -504,15 +416,16 @@ function App() {
           path="/auditor/abuse"
           element={
             <ProtectedRoute allowedRole="auditor">
-              <BusinessLayout><AbuseWorkflow /></BusinessLayout>
+              <P.BusinessLayout><P.AbuseWorkflow /></P.BusinessLayout>
             </ProtectedRoute>
           }
         />
 
 
         {/* Catch-all for Unauthorized */}
-        <Route path="/unauthorized" element={<Unauthorized />} />
+        <Route path="/unauthorized" element={<P.Unauthorized />} />
       </Routes>
+        </Suspense>
     </Router>
   </CouncilProvider>
   );

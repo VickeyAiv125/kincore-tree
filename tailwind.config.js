@@ -12,7 +12,7 @@ export default {
       },
       colors: {
         brand: {
-          orange: '#FF6B3D',
+          orange: '#D14B15',
           dark: '#1C1C1C',
           light: '#F5F5F5',
           input: '#F1F1F1',

@@ -167,7 +167,7 @@ const LegendItem = ({ icon: Icon, label, color }) => (
     </div>
 );
 
-const TreeNode = React.forwardRef(({ person, isActive, isChild, onAddClick, onClick }, ref) => {
+const TreeNode = React.forwardRef(({ person, isActive, isChild, onAddClick, onClick, alwaysShowAdd }, ref) => {
     const [isHovered, setIsHovered] = useState(false);
     const name = getPersonName(person);
     const status = getStatus(person);
@@ -201,14 +201,15 @@ const TreeNode = React.forwardRef(({ person, isActive, isChild, onAddClick, onCl
             </div>
 
             {/* Add (+) — opens spouse / parent / member menu */}
-            <div className={`absolute -bottom-3.5 left-1/2 -translate-x-1/2 transition-all duration-200 ${isHovered ? 'opacity-100 scale-100' : 'opacity-25 scale-90'}`}>
+            <div className={`absolute -bottom-3.5 left-1/2 -translate-x-1/2 transition-all duration-200 z-20 ${alwaysShowAdd || isHovered ? 'opacity-100 scale-100' : 'opacity-25 scale-90'}`}>
                 <button
                     type="button"
                     onClick={(e) => { e.stopPropagation(); onAddClick?.(person); }}
-                    className="w-7 h-7 bg-brand-orange text-white rounded-full flex items-center justify-center shadow-md hover:scale-110 active:scale-95 transition-transform"
-                    title="Add spouse, parent, or member"
+                    className={`${alwaysShowAdd ? 'w-9 h-9' : 'w-7 h-7'} bg-brand-orange text-white rounded-full flex items-center justify-center shadow-md hover:scale-110 active:scale-95 transition-transform`}
+                    title="Add spouse, parent, child, or member"
+                    aria-label="Add spouse, parent, child, or member"
                 >
-                    <Plus size={13} strokeWidth={3} />
+                    <Plus size={alwaysShowAdd ? 16 : 13} strokeWidth={3} />
                 </button>
             </div>
 
@@ -563,20 +564,11 @@ const FamilyTree = () => {
         const typeMap = {
             'Add Spouse': 'spouse',
             'Add Parent': 'parent',
+            'Add Child': 'child',
             'Add Member': 'member',
         };
         if (typeMap[action]) {
             openAddModal(target, typeMap[action]);
-            return;
-        }
-
-        const state = {
-            target_person_id: target.id,
-            target_name: target.name || getPersonName(target),
-        };
-
-        if (action === 'Add Child') {
-            navigate('/governance/add-child', { state });
         }
     };
 
@@ -727,6 +719,7 @@ const FamilyTree = () => {
                                                     person={person}
                                                     isActive={selectedMember?.id === person.id}
                                                     isChild={personIsChild}
+                                                    alwaysShowAdd={isAppView}
                                                     onAddClick={handleAddClick}
                                                     onClick={() => handleNodeClick(person)}
                                                 />
@@ -995,7 +988,7 @@ const FamilyTree = () => {
                     {/* ── Footer Actions ── */}
                     <div className="p-8 bg-white dark:bg-brand-darkCard border-t border-gray-50 dark:border-brand-darkBorder flex flex-col space-y-4 transition-colors shadow-inner">
                         {/* Spouse / parent / member quick-add */}
-                        <div className="grid grid-cols-3 gap-2">
+                        <div className="grid grid-cols-2 gap-2">
                             <button
                                 onClick={() => handleAction('Add Spouse')}
                                 className="bg-brand-orange text-white rounded-2xl py-3 text-[10px] font-black uppercase tracking-widest flex flex-col items-center justify-center gap-1 hover:bg-brand-orange/90 active:scale-95 transition-all shadow-lg"
@@ -1009,6 +1002,13 @@ const FamilyTree = () => {
                             >
                                 <UserPlus size={14} strokeWidth={2.5} />
                                 <span>Parent</span>
+                            </button>
+                            <button
+                                onClick={() => handleAction('Add Child')}
+                                className="bg-blue-500 text-white rounded-2xl py-3 text-[10px] font-black uppercase tracking-widest flex flex-col items-center justify-center gap-1 hover:bg-blue-600 active:scale-95 transition-all shadow-lg"
+                            >
+                                <Baby size={14} strokeWidth={2.5} />
+                                <span>Child</span>
                             </button>
                             <button
                                 onClick={() => handleAction('Add Member')}

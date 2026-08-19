@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import { Mail, Lock, Eye, EyeOff, X } from 'lucide-react';
+import { Lock, Eye, EyeOff, X, User } from 'lucide-react';
 import ThemeToggle from '../components/common/ThemeToggle';
 
 const API = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api';
@@ -41,10 +41,12 @@ const persistSession = (data) => {
 
 const Login = () => {
     const navigate = useNavigate();
-    const [email, setEmail] = useState('');
+    const [identifier, setIdentifier] = useState('');
     const [password, setPassword] = useState('');
     const [showPassword, setShowPassword] = useState(false);
     const [rememberMe, setRememberMe] = useState(false);
+    const [loginLoading, setLoginLoading] = useState(false);
+    const [loginError, setLoginError] = useState('');
     const [googleLoading, setGoogleLoading] = useState(false);
     const [facebookLoading, setFacebookLoading] = useState(false);
 
@@ -58,13 +60,15 @@ const Login = () => {
     const socialBusy = googleLoading || facebookLoading || kccLoading;
 
     const handleGoogleSignIn = () => {
+        setLoginError('');
         setGoogleLoading(true);
-        window.location.href = `${API}/auth/google?mode=login`;
+        window.location.href = `${API}/auth/google?mode=login&client_type=web`;
     };
 
     const handleFacebookSignIn = () => {
+        setLoginError('');
         setFacebookLoading(true);
-        window.location.href = `${API}/auth/facebook?mode=login`;
+        window.location.href = `${API}/auth/facebook?mode=login&client_type=web`;
     };
 
     const handleKccLogin = async (e) => {
@@ -107,29 +111,47 @@ const Login = () => {
 
     const handleSubmit = async (e) => {
         e.preventDefault();
+        setLoginError('');
+
+        const trimmed = identifier.trim();
+        if (!trimmed.includes('@') && /^kcc/i.test(trimmed)) {
+            setKccId(trimmed);
+            setKccOpen(true);
+            setLoginError('Use the KCC button below to sign in with your KCC ID.');
+            return;
+        }
 
         const currentTheme = localStorage.getItem('theme');
         localStorage.clear();
         if (currentTheme) localStorage.setItem('theme', currentTheme);
 
+        setLoginLoading(true);
         try {
             const response = await fetch(`${API}/auth/login`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ email, password })
+                body: JSON.stringify({ identifier: trimmed, password })
             });
 
-            const data = await response.json();
+            const raw = await response.text();
+            let data = {};
+            try {
+                data = raw ? JSON.parse(raw) : {};
+            } catch {
+                throw new Error(`Server returned an unexpected response (${response.status}).`);
+            }
 
             if (response.ok) {
                 persistSession(data);
                 routeForRole(data.user?.role, navigate);
             } else {
-                alert(data.error || 'Login failed');
+                setLoginError(data.error || 'Login failed. Check your email or username and password.');
             }
         } catch (err) {
             console.error('Login error:', err);
-            alert('Could not connect to the server. Please ensure the backend is running.');
+            setLoginError(err.message || 'Could not connect to the server. Please try again.');
+        } finally {
+            setLoginLoading(false);
         }
     };
 
@@ -140,7 +162,7 @@ const Login = () => {
             </div>
             <div className="w-full max-w-[480px]">
                 <div className="text-center mb-8">
-                    <h1 className="text-[#FF6D4D] text-4xl font-bold mb-2 tracking-tight">Kincore</h1>
+                    <h1 className="text-brand-orange text-4xl font-bold mb-2 tracking-tight">Kincore</h1>
                     <h2 className="text-black dark:text-brand-darkText text-2xl font-bold mb-1 uppercase tracking-tight">Admin Portal</h2>
                     <p className="text-gray-500 dark:text-gray-400 text-sm font-medium">Secure access for enterprise management</p>
                 </div>
@@ -186,25 +208,31 @@ const Login = () => {
 
                     <div className="flex items-center gap-4 my-8">
                         <div className="h-px flex-1 bg-gray-100 dark:bg-brand-darkBorder" />
-                        <span className="text-[10px] font-black uppercase tracking-widest text-gray-400">or email</span>
+                        <span className="text-[10px] font-black uppercase tracking-widest text-gray-400">or email / username</span>
                         <div className="h-px flex-1 bg-gray-100 dark:bg-brand-darkBorder" />
                     </div>
 
                     <form className="space-y-6" onSubmit={handleSubmit}>
+                        {loginError && (
+                            <p className="rounded-2xl bg-red-50 dark:bg-red-950/30 px-4 py-3 text-sm font-semibold text-red-600 dark:text-red-400">
+                                {loginError}
+                            </p>
+                        )}
                         <div className="space-y-2">
                             <label className="block text-black dark:text-brand-darkText font-bold text-sm ml-1">
-                                Email Address
+                                Email or username
                             </label>
                             <div className="relative">
                                 <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-                                    <Mail className="h-5 w-5 text-gray-400" />
+                                    <User className="h-5 w-5 text-gray-400" />
                                 </div>
                                 <input
-                                    type="email"
-                                    value={email}
-                                    onChange={(e) => setEmail(e.target.value)}
-                                    className="block w-full pl-12 pr-4 py-4 bg-[#F3F4F6]/50 dark:bg-brand-darkBg/50 border-none rounded-2xl focus:ring-2 focus:ring-[#FF6D4D]/20 placeholder-gray-400 dark:placeholder-gray-500 text-gray-900 dark:text-brand-darkText font-medium"
-                                    placeholder="admin@gmail.com"
+                                    type="text"
+                                    value={identifier}
+                                    onChange={(e) => setIdentifier(e.target.value)}
+                                    autoComplete="username"
+                                    className="block w-full pl-12 pr-4 py-4 bg-[#F3F4F6]/50 dark:bg-brand-darkBg/50 border-none rounded-2xl focus:ring-2 focus:ring-brand-orange/20 placeholder-gray-400 dark:placeholder-gray-500 text-gray-900 dark:text-brand-darkText font-medium"
+                                    placeholder="you@example.com or wallet handle"
                                     required
                                 />
                             </div>
@@ -222,7 +250,7 @@ const Login = () => {
                                     type={showPassword ? 'text' : 'password'}
                                     value={password}
                                     onChange={(e) => setPassword(e.target.value)}
-                                    className="block w-full pl-12 pr-12 py-4 bg-[#F3F4F6]/50 dark:bg-brand-darkBg/50 border-none rounded-2xl focus:ring-2 focus:ring-[#FF6D4D]/20 placeholder-gray-400 dark:placeholder-gray-500 text-gray-900 dark:text-brand-darkText font-medium"
+                                    className="block w-full pl-12 pr-12 py-4 bg-[#F3F4F6]/50 dark:bg-brand-darkBg/50 border-none rounded-2xl focus:ring-2 focus:ring-brand-orange/20 placeholder-gray-400 dark:placeholder-gray-500 text-gray-900 dark:text-brand-darkText font-medium"
                                     placeholder="Enter your password"
                                     required
                                 />
@@ -244,7 +272,7 @@ const Login = () => {
                                         type="checkbox"
                                         checked={rememberMe}
                                         onChange={(e) => setRememberMe(e.target.checked)}
-                                        className="h-5 w-5 bg-[#F3F4F6] dark:bg-brand-darkBg border-none rounded focus:ring-0 text-[#FF6D4D] cursor-pointer"
+                                        className="h-5 w-5 bg-[#F3F4F6] dark:bg-brand-darkBg border-none rounded focus:ring-0 text-brand-orange cursor-pointer"
                                     />
                                 </div>
                                 <label htmlFor="remember-me" className="ml-3 block text-sm font-bold text-gray-800 dark:text-brand-darkText cursor-pointer">
@@ -254,7 +282,7 @@ const Login = () => {
                             <div>
                                 <Link
                                     to="/forgot-password"
-                                    className="text-sm font-bold text-[#FF6D4D] hover:underline"
+                                    className="text-sm font-bold text-brand-orange hover:underline"
                                 >
                                     Forgot Password
                                 </Link>
@@ -263,9 +291,10 @@ const Login = () => {
 
                         <button
                             type="submit"
-                            className="w-full flex justify-center py-4 px-4 border border-transparent rounded-full shadow-md text-sm font-bold text-white bg-[#FF6D4D] hover:bg-[#FF5D3D] transition-all transform hover:scale-[1.01] active:scale-[0.99] mt-4"
+                            disabled={loginLoading || socialBusy}
+                            className="w-full flex justify-center py-4 px-4 border border-transparent rounded-full shadow-md text-sm font-bold text-white bg-brand-orange hover:opacity-95 transition-all transform hover:scale-[1.01] active:scale-[0.99] mt-4 disabled:opacity-60"
                         >
-                            Get Started
+                            {loginLoading ? 'Signing in…' : 'Sign In'}
                         </button>
                     </form>
 
@@ -287,7 +316,7 @@ const Login = () => {
                             <X size={18} />
                         </button>
                         <div className="mb-6 text-left">
-                            <p className="text-[10px] font-black uppercase tracking-widest text-[#FF6D4D] mb-2">KCC ID</p>
+                            <p className="text-[10px] font-black uppercase tracking-widest text-brand-orange mb-2">KCC ID</p>
                             <h3 className="text-xl font-extrabold text-gray-900 dark:text-brand-darkText">Continue with KCC</h3>
                             <p className="text-xs text-gray-500 mt-2 font-medium">
                                 Sign in with your ecosystem KCC ID account (client: kincore).
@@ -302,7 +331,7 @@ const Login = () => {
                                     onChange={(e) => setKccId(e.target.value)}
                                     required
                                     autoFocus
-                                    className="w-full px-4 py-3.5 rounded-2xl bg-gray-50 dark:bg-brand-darkBg border-none text-sm font-medium outline-none focus:ring-2 focus:ring-[#FF6D4D]/20"
+                                    className="w-full px-4 py-3.5 rounded-2xl bg-gray-50 dark:bg-brand-darkBg border-none text-sm font-medium outline-none focus:ring-2 focus:ring-brand-orange/20"
                                     placeholder="you@example.com"
                                 />
                             </div>
@@ -314,7 +343,7 @@ const Login = () => {
                                         value={kccPassword}
                                         onChange={(e) => setKccPassword(e.target.value)}
                                         required
-                                        className="w-full px-4 py-3.5 pr-12 rounded-2xl bg-gray-50 dark:bg-brand-darkBg border-none text-sm font-medium outline-none focus:ring-2 focus:ring-[#FF6D4D]/20"
+                                        className="w-full px-4 py-3.5 pr-12 rounded-2xl bg-gray-50 dark:bg-brand-darkBg border-none text-sm font-medium outline-none focus:ring-2 focus:ring-brand-orange/20"
                                         placeholder="KCC password"
                                     />
                                     <button
@@ -332,7 +361,7 @@ const Login = () => {
                             <button
                                 type="submit"
                                 disabled={kccLoading}
-                                className="w-full py-4 rounded-full bg-[#FF6D4D] text-white text-sm font-bold hover:bg-[#FF5D3D] disabled:opacity-60"
+                                className="w-full py-4 rounded-full bg-brand-orange text-white text-sm font-bold hover:opacity-95 disabled:opacity-60"
                             >
                                 {kccLoading ? 'Signing in…' : 'Sign in with KCC'}
                             </button>

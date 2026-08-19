@@ -56,7 +56,7 @@ const AddSpouse = () => {
         email: '',
         gender: 'Female',
         anniversary_date: '',
-        place_of_marriage: '',
+        place_of_birth: '',
         current_location: '',
         bio_notes: ''
     });
@@ -135,7 +135,7 @@ const AddSpouse = () => {
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-8">
                     <PremiumInput label="Marriage Date" name="anniversary_date" icon={Heart} placeholder="MM/DD/YYYY" value={formData.anniversary_date} onChange={handleChange} />
-                    <PremiumInput label="Place of Marriage" name="place_of_marriage" icon={MapPin} placeholder="City, Country" value={formData.place_of_marriage} onChange={handleChange} />
+                    <PremiumInput label="Place of Marriage" name="place_of_birth" icon={MapPin} placeholder="City, Country" value={formData.place_of_birth} onChange={handleChange} />
                 </div>
 
                 <PremiumInput label="Current Residence" name="current_location" icon={Map} placeholder="Enter current address" value={formData.current_location} onChange={handleChange} />

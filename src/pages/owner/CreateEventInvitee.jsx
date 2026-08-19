@@ -196,7 +196,10 @@ const CreateEventInvitee = () => {
         description: '',
         startDate: '',
         endDate: '',
-        time: ''
+        time: '',
+        requestRsvp: true,
+        sendReminders: true,
+        includeGiftExchange: false
     });
     const [errors, setErrors] = useState({});
     const [activePicker, setActivePicker] = useState(null); // 'startDate', 'endDate', 'time' or null
@@ -240,8 +243,8 @@ const CreateEventInvitee = () => {
     }, [formData.startDate, formData.endDate]);
 
     const handleChange = (e) => {
-        const { name, value } = e.target;
-        setFormData(prev => ({ ...prev, [name]: value }));
+        const { name, value, type, checked } = e.target;
+        setFormData(prev => ({ ...prev, [name]: type === 'checkbox' ? checked : value }));
     };
 
     // Fetch members for invitations
@@ -302,18 +305,21 @@ const CreateEventInvitee = () => {
             const endpoint = `${baseUrl}/families/${familyId}/events`;
 
             const data = new FormData();
+            data.append('family_space_id', familyId);
             data.append('title', formData.title);
-            data.append('location', formData.location);
-            data.append('description', formData.description);
+            data.append('description', formData.description || '');
             data.append('start_date', formData.startDate);
-            data.append('end_date', formData.endDate);
-            data.append('event_time', formData.time);
-            data.append('family_space_id', user.family_id);
-            data.append('event_type', 'gathering');
+            data.append('end_date', formData.endDate || '');
+            data.append('event_time', formData.time || '');
+            data.append('location', formData.location || '');
+            data.append('request_rsvp', String(!!formData.requestRsvp));
+            data.append('send_reminders', String(!!formData.sendReminders));
+            data.append('include_gift_exchange', String(!!formData.includeGiftExchange));
             data.append('invited_user_ids', JSON.stringify(selectedMembers));
+            data.append('event_type', 'gathering');
 
             if (coverFile) {
-                data.append('cover_image', coverFile);
+                data.append('cover_photo', coverFile);
             }
 
             const response = await fetch(endpoint, {
@@ -519,6 +525,21 @@ const CreateEventInvitee = () => {
                                 />
                             )}
                         </AnimatePresence>
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-2">
+                        <label className="flex items-center space-x-3 bg-gray-50 dark:bg-brand-darkBg/50 rounded-[1.5rem] py-4 px-6 cursor-pointer">
+                            <input type="checkbox" name="requestRsvp" checked={!!formData.requestRsvp} onChange={handleChange} className="accent-brand-orange w-4 h-4" />
+                            <span className="text-[10px] font-black text-gray-500 uppercase tracking-widest">Request RSVP</span>
+                        </label>
+                        <label className="flex items-center space-x-3 bg-gray-50 dark:bg-brand-darkBg/50 rounded-[1.5rem] py-4 px-6 cursor-pointer">
+                            <input type="checkbox" name="sendReminders" checked={!!formData.sendReminders} onChange={handleChange} className="accent-brand-orange w-4 h-4" />
+                            <span className="text-[10px] font-black text-gray-500 uppercase tracking-widest">Send reminders</span>
+                        </label>
+                        <label className="flex items-center space-x-3 bg-gray-50 dark:bg-brand-darkBg/50 rounded-[1.5rem] py-4 px-6 cursor-pointer">
+                            <input type="checkbox" name="includeGiftExchange" checked={!!formData.includeGiftExchange} onChange={handleChange} className="accent-brand-orange w-4 h-4" />
+                            <span className="text-[10px] font-black text-gray-500 uppercase tracking-widest">Gift exchange</span>
+                        </label>
                     </div>
                 </div>
             </div>

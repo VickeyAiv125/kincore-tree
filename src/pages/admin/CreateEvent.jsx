@@ -201,14 +201,26 @@ const CreateEvent = () => {
             if (familyId === 'undefined' || familyId === 'null') familyId = 'DEFAULT_FAMILY_ID';
 
             const body = new FormData();
+            body.append('family_space_id', familyId);
             body.append('title', eventData.title);
             body.append('event_type', eventData.type);
             body.append('description', eventData.description || '');
             if (eventData.startDate) body.append('start_date', eventData.startDate);
             if (eventData.endDate) body.append('end_date', eventData.endDate);
+            if (eventData.eventTime || eventData.time) body.append('event_time', eventData.eventTime || eventData.time);
             if (eventData.rsvpDeadline) body.append('rsvp_deadline', eventData.rsvpDeadline);
             body.append('location', eventData.locationType === 'physical' ? (eventData.address || '') : (eventData.meetingLink || ''));
             if (eventData.capacity) body.append('max_participants', eventData.capacity);
+            body.append('request_rsvp', String(eventData.requestRsvp !== false));
+            body.append('send_reminders', String(
+                eventData.sendReminders === true ||
+                (Array.isArray(eventData.reminders) && eventData.reminders.length > 0) ||
+                !!eventData.inviteMethods?.notification
+            ));
+            body.append('include_gift_exchange', String(!!eventData.isSecretSanta || !!eventData.includeGiftExchange));
+            if (eventData.invitedUserIds?.length) {
+                body.append('invited_user_ids', JSON.stringify(eventData.invitedUserIds));
+            }
             // Dynamic Features
             body.append('is_secret_santa', eventData.isSecretSanta);
             if (eventData.isSecretSanta) {

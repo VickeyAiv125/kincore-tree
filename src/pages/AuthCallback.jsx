@@ -30,27 +30,33 @@ const cacheFamily = (user) => {
     }
 };
 
+const providerLabel = (provider) => {
+    if (provider === 'facebook') return 'Facebook';
+    if (provider === 'google') return 'Google';
+    return 'Sign-in';
+};
+
 /**
- * Completes Google SSO after backend redirects with ?token=
+ * Completes Google/Facebook SSO after backend redirects with ?token=
  */
 const AuthCallback = () => {
     const [searchParams] = useSearchParams();
     const navigate = useNavigate();
-    const [message, setMessage] = useState('Completing Google sign-in…');
+    const provider = searchParams.get('provider') || 'google';
+    const [message, setMessage] = useState(`Completing ${providerLabel(provider)} sign-in…`);
 
     useEffect(() => {
         const run = async () => {
             const error = searchParams.get('error');
             if (error) {
-                setMessage(error);
-                setTimeout(() => navigate('/', { replace: true }), 3500);
+                setMessage(decodeURIComponent(error.replace(/\+/g, ' ')));
+                setTimeout(() => navigate('/', { replace: true }), 4500);
                 return;
             }
 
             const token = searchParams.get('token');
-            const provider = searchParams.get('provider') || 'google';
             if (!token) {
-                setMessage('Missing auth token from Google sign-in.');
+                setMessage(`Missing auth token from ${providerLabel(provider)} sign-in.`);
                 setTimeout(() => navigate('/', { replace: true }), 2500);
                 return;
             }
@@ -70,9 +76,15 @@ const AuthCallback = () => {
                         allow_signup: true
                     })
                 });
-                const data = await response.json();
+                const raw = await response.text();
+                let data = {};
+                try {
+                    data = raw ? JSON.parse(raw) : {};
+                } catch {
+                    throw new Error(`Unexpected server response (${response.status}).`);
+                }
                 if (!response.ok) {
-                    throw new Error(data.error || 'Google sign-in failed');
+                    throw new Error(data.error || `${providerLabel(provider)} sign-in failed`);
                 }
 
                 localStorage.setItem('token', data.token || token);
@@ -82,18 +94,18 @@ const AuthCallback = () => {
                 navigate(routeForRole(data.user?.role), { replace: true });
             } catch (err) {
                 console.error('[AuthCallback]', err);
-                setMessage(err.message || 'Google sign-in failed');
-                setTimeout(() => navigate('/', { replace: true }), 3500);
+                setMessage(err.message || `${providerLabel(provider)} sign-in failed`);
+                setTimeout(() => navigate('/', { replace: true }), 4500);
             }
         };
 
         run();
-    }, [searchParams, navigate]);
+    }, [searchParams, navigate, provider]);
 
     return (
         <div className="min-h-screen bg-[#F3F4F6] dark:bg-brand-darkBg flex items-center justify-center p-6">
             <div className="bg-white dark:bg-brand-darkCard rounded-[2rem] px-10 py-12 shadow-sm max-w-md w-full text-center">
-                <h1 className="text-[#FF6D4D] text-3xl font-bold mb-4">Kincore</h1>
+                <h1 className="text-brand-orange text-3xl font-bold mb-4">Kincore</h1>
                 <p className="text-sm font-medium text-gray-600 dark:text-gray-400 leading-relaxed">{message}</p>
             </div>
         </div>

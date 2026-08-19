@@ -43,6 +43,7 @@ jobs:
           USER: ${{ secrets.UAT_USER }}
           PORT: ${{ secrets.UAT_SSH_PORT || 22 }}
         run: |
+          # nginx root for uat-admin.kincore.com must match this path (see sites-available/uat-admin.kincore.com)
           rsync -avz --delete \
             -e "ssh -i ~/.ssh/uat_key -p ${PORT} -o IdentitiesOnly=yes" \
             ./dist/ "${USER}@${HOST}:/var/www/uat-admin.kincore.com/"
