@@ -319,7 +319,7 @@ const Login = () => {
                             <p className="text-[10px] font-black uppercase tracking-widest text-brand-orange mb-2">KCC ID</p>
                             <h3 className="text-xl font-extrabold text-gray-900 dark:text-brand-darkText">Continue with KCC</h3>
                             <p className="text-xs text-gray-500 mt-2 font-medium">
-                                Sign in with your ecosystem KCC ID account (client: kincore).
+                                Use your ecosystem KCC ID (client: kincore). Kincore admin emails such as auditor@admin.com are not KCC accounts — use Email / username on the main login form.
                             </p>
                         </div>
                         <form className="space-y-4" onSubmit={handleKccLogin}>
@@ -344,7 +344,7 @@ const Login = () => {
                                         onChange={(e) => setKccPassword(e.target.value)}
                                         required
                                         className="w-full px-4 py-3.5 pr-12 rounded-2xl bg-gray-50 dark:bg-brand-darkBg border-none text-sm font-medium outline-none focus:ring-2 focus:ring-brand-orange/20"
-                                        placeholder="KCC password"
+                                        placeholder="KCC or Kincore password"
                                     />
                                     <button
                                         type="button"
