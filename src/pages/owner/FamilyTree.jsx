@@ -1,11 +1,20 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { getTreeWebviewContext } from '../../utils/treeWebviewNav';
 import TreeNodeAddModal from '../../components/tree/TreeNodeAddModal';
 import {
-    Plus, Baby, Shield, Lock, UserCheck, MapPin, FileText,
+    AppAddChildNode,
+    AppAvatarNode,
+    AppCoupleUnit,
+    AppTreeTabs,
+    getLoggedInUserId,
+    groupGenerationUnits,
+    isYou,
+} from '../../components/tree/AppTreeNodes';
+import {
+    Plus, Minus, Baby, Shield, Lock, UserCheck, MapPin, FileText,
     Skull, Calendar, RefreshCw, Undo2, Save, Info, UserPlus, Search, GitMerge, Heart, ChevronUp,
-    CheckCircle2, AlertTriangle
+    CheckCircle2, AlertTriangle, UserRoundPlus
 } from 'lucide-react';
 
 /* ─────────────────────────────────────────────
@@ -388,6 +397,8 @@ const FamilyTree = () => {
     };
 
     const [svgLines, setSvgLines] = useState([]);
+    const [treeViewMode, setTreeViewMode] = useState('full'); // full | lineage | birthdays
+    const currentUserId = useMemo(() => getLoggedInUserId(), []);
 
     // Refs
     const nodeRefs = useRef({});
@@ -522,10 +533,55 @@ const FamilyTree = () => {
         setSvgLines(lines);
     }, [treeStructure]);
 
+    /* ── App view flag ── */
+    const isAppView = new URLSearchParams(window.location.search).get('view') === 'app' || window.location.pathname.includes('/webview/');
+
+    const totalMembers = persons.length;
+    const totalGenerations = treeStructure.generations.length;
+
+    const visibleGenerations = useMemo(() => {
+        const gens = treeStructure.generations || [];
+        if (treeViewMode === 'birthdays') {
+            return gens
+                .map((gen) => gen.filter((p) => p.birth_date || p.date_of_birth))
+                .filter((gen) => gen.length > 0);
+        }
+        if (treeViewMode === 'lineage' && currentUserId) {
+            const youPerson = persons.find((p) => isYou(p, currentUserId)) || selectedMember;
+            if (!youPerson?.id) return gens;
+            const keep = new Set([youPerson.id]);
+            const walkUp = (id) => {
+                (treeStructure.parentsOf[id] || []).forEach((pid) => {
+                    if (!keep.has(pid)) {
+                        keep.add(pid);
+                        walkUp(pid);
+                    }
+                });
+            };
+            const walkDown = (id) => {
+                (treeStructure.childrenOf[id] || []).forEach((cid) => {
+                    if (!keep.has(cid)) {
+                        keep.add(cid);
+                        walkDown(cid);
+                    }
+                });
+            };
+            walkUp(youPerson.id);
+            walkDown(youPerson.id);
+            keep.forEach((id) => {
+                (treeStructure.spouseOf[id] || []).forEach((sid) => keep.add(sid));
+            });
+            return gens
+                .map((gen) => gen.filter((p) => keep.has(p.id)))
+                .filter((gen) => gen.length > 0);
+        }
+        return gens;
+    }, [treeStructure, treeViewMode, currentUserId, persons, selectedMember]);
+
     useEffect(() => {
         const id = setTimeout(computeLines, 200);
         return () => clearTimeout(id);
-    }, [computeLines, zoom, position]);
+    }, [computeLines, zoom, position, treeViewMode, visibleGenerations]);
 
 
     /* ── Pan / Zoom ── */
@@ -586,12 +642,6 @@ const FamilyTree = () => {
         } catch (err) { console.error('Save failed:', err); }
     };
 
-    /* ── App view flag ── */
-    const isAppView = new URLSearchParams(window.location.search).get('view') === 'app' || window.location.pathname.includes('/webview/');
-
-    const totalMembers = persons.length;
-    const totalGenerations = treeStructure.generations.length;
-
     /* ── Find relations for sidebar ── */
     const getRelations = (personId) => {
         const parents = (treeStructure.parentsOf?.[personId] || [])
@@ -621,7 +671,7 @@ const FamilyTree = () => {
 
     /* ── Render ── */
     return (
-        <div className={`flex ${isAppView ? 'h-screen w-screen m-0' : 'h-full -m-8'} relative overflow-hidden bg-[#F9FAFB]/50 dark:bg-brand-darkBg transition-colors`}>
+        <div className={`flex ${isAppView ? 'h-screen w-screen m-0' : 'h-full -m-8'} relative overflow-hidden ${isAppView ? 'bg-[#F7F5F2]' : 'bg-[#F9FAFB]/50 dark:bg-brand-darkBg'} transition-colors`}>
 
             {/* ── TREE AREA ── */}
             {/* Padding-right reserves space for the fixed right sidebar */}
@@ -634,34 +684,74 @@ const FamilyTree = () => {
                     </div>
                 )}
 
-                {/* Generation Pills — fixed to top center, unaffected by zoom or sidebar */}
-                <div className="fixed top-4 left-1/2 -translate-x-1/2 z-30 flex items-center space-x-2">
-                    <div className="bg-white/80 dark:bg-brand-darkCard/80 backdrop-blur-md px-4 py-2 rounded-2xl border border-gray-100 dark:border-brand-darkBorder shadow-sm flex items-center space-x-4">
-                        <button className="text-[10px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-widest hover:text-brand-orange transition-colors">Master Lineage</button>
-                        <div className="w-px h-4 bg-gray-200 dark:bg-brand-darkBorder" />
-                        <span className="text-[10px] font-black text-brand-orange uppercase tracking-widest">
-                            Generation {totalGenerations} • {totalMembers} Members
-                        </span>
-                        <div className="w-px h-4 bg-gray-200 dark:bg-brand-darkBorder" />
-                        <button onClick={resetView} className="text-[10px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-widest hover:text-brand-orange transition-colors">Center Tree</button>
+                {/* App chrome: view tabs */}
+                {isAppView && (
+                    <div className="fixed top-3 left-0 right-0 z-30 px-4 pointer-events-none">
+                        <div className="pointer-events-auto max-w-lg mx-auto">
+                            <AppTreeTabs value={treeViewMode} onChange={setTreeViewMode} />
+                            <p className="mt-2 text-center text-[11px] font-semibold text-[#8A8794]">
+                                {totalGenerations} Generations • {totalMembers} Members
+                            </p>
+                        </div>
+                    </div>
+                )}
+
+                {/* Generation Pills — desktop admin only */}
+                {!isAppView && (
+                    <div className="fixed top-4 left-1/2 -translate-x-1/2 z-30 flex items-center space-x-2">
+                        <div className="bg-white/80 dark:bg-brand-darkCard/80 backdrop-blur-md px-4 py-2 rounded-2xl border border-gray-100 dark:border-brand-darkBorder shadow-sm flex items-center space-x-4">
+                            <button className="text-[10px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-widest hover:text-brand-orange transition-colors">Master Lineage</button>
+                            <div className="w-px h-4 bg-gray-200 dark:bg-brand-darkBorder" />
+                            <span className="text-[10px] font-black text-brand-orange uppercase tracking-widest">
+                                Generation {totalGenerations} • {totalMembers} Members
+                            </span>
+                            <div className="w-px h-4 bg-gray-200 dark:bg-brand-darkBorder" />
+                            <button onClick={resetView} className="text-[10px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-widest hover:text-brand-orange transition-colors">Center Tree</button>
+                        </div>
+                    </div>
+                )}
+
+                {/* Zoom Controls */}
+                <div className={`fixed z-30 flex flex-col space-y-1 ${
+                    isAppView
+                        ? 'left-4 bottom-6'
+                        : 'top-4 right-[368px]'
+                }`}>
+                    <div className={`bg-white/95 dark:bg-brand-darkCard/80 backdrop-blur-md ${isAppView ? 'p-1 rounded-full shadow-lg border border-[#EFEAE4]' : 'p-1.5 rounded-2xl border border-gray-100 dark:border-brand-darkBorder shadow-xl'} flex flex-col space-y-0.5`}>
+                        <button onClick={() => handleZoom(0.1)} className={`${isAppView ? 'p-3' : 'p-2.5'} hover:bg-gray-100 dark:hover:bg-brand-darkBg ${isAppView ? 'rounded-full' : 'rounded-xl'} text-gray-500 hover:text-[#FF622E] transition-colors`} title="Zoom In">
+                            <Plus size={18} strokeWidth={2.5} />
+                        </button>
+                        <button onClick={() => handleZoom(-0.1)} className={`${isAppView ? 'p-3' : 'p-2.5'} hover:bg-gray-100 dark:hover:bg-brand-darkBg ${isAppView ? 'rounded-full' : 'rounded-xl'} text-gray-500 hover:text-[#FF622E] transition-colors`} title="Zoom Out">
+                            <Minus size={18} strokeWidth={2.5} />
+                        </button>
+                        {!isAppView && (
+                            <>
+                                <div className="h-px bg-gray-100 dark:bg-brand-darkBorder mx-1.5" />
+                                <button onClick={resetView} className="p-2.5 hover:bg-gray-100 dark:hover:bg-brand-darkBg rounded-xl text-gray-400 hover:text-brand-orange transition-colors" title="Reset View">
+                                    <RefreshCw size={16} strokeWidth={3} />
+                                </button>
+                            </>
+                        )}
                     </div>
                 </div>
 
-                {/* Zoom Controls — inset for sidebar on web; flush right in app WebView */}
-                <div className={`fixed top-4 z-30 flex flex-col space-y-1 ${isAppView ? 'right-4' : 'right-[368px]'}`}>
-                    <div className="bg-white/80 dark:bg-brand-darkCard/80 backdrop-blur-md p-1.5 rounded-2xl border border-gray-100 dark:border-brand-darkBorder shadow-xl flex flex-col space-y-0.5">
-                        <button onClick={() => handleZoom(0.1)} className="p-2.5 hover:bg-gray-100 dark:hover:bg-brand-darkBg rounded-xl text-gray-400 hover:text-brand-orange transition-colors" title="Zoom In">
-                            <Plus size={16} strokeWidth={3} />
-                        </button>
-                        <button onClick={() => handleZoom(-0.1)} className="p-2.5 hover:bg-gray-100 dark:hover:bg-brand-darkBg rounded-xl text-gray-400 hover:text-brand-orange transition-colors" title="Zoom Out">
-                            <Plus size={16} strokeWidth={3} className="rotate-45" />
-                        </button>
-                        <div className="h-px bg-gray-100 dark:bg-brand-darkBorder mx-1.5" />
-                        <button onClick={resetView} className="p-2.5 hover:bg-gray-100 dark:hover:bg-brand-darkBg rounded-xl text-gray-400 hover:text-brand-orange transition-colors" title="Reset View">
-                            <RefreshCw size={16} strokeWidth={3} />
-                        </button>
-                    </div>
-                </div>
+                {/* App Add Person FAB */}
+                {isAppView && (
+                    <button
+                        type="button"
+                        onClick={() => {
+                            const focus = selectedMember
+                                || persons.find((p) => isYou(p, currentUserId))
+                                || persons[0];
+                            if (focus) openAddModal(focus);
+                        }}
+                        className="fixed right-4 bottom-6 z-30 w-14 h-14 rounded-full bg-[#FF622E] text-white shadow-xl shadow-orange-300/50 flex items-center justify-center active:scale-95 transition-transform"
+                        title="Add family member"
+                        aria-label="Add family member"
+                    >
+                        <UserRoundPlus size={24} strokeWidth={2.25} />
+                    </button>
+                )}
 
                 {/* Pan / Zoom Canvas */}
                 <div
@@ -696,8 +786,8 @@ const FamilyTree = () => {
                                             y1={isVertical && line.y1 < line.y2 ? line.y1 + 4 : line.y1}
                                             x2={line.x2}
                                             y2={isVertical && line.y2 > line.y1 ? line.y2 - 4 : line.y2}
-                                            stroke="rgba(251,146,60,0.6)"
-                                            strokeWidth="2.5"
+                                            stroke={isAppView ? 'rgba(160,160,170,0.85)' : 'rgba(251,146,60,0.6)'}
+                                            strokeWidth={isAppView ? '1.75' : '2.5'}
                                             strokeLinecap="round"
                                         />
                                     );
@@ -706,27 +796,75 @@ const FamilyTree = () => {
                         )}
 
                         {/* Tree Generations — each generation = ONE horizontal non-wrapping row */}
-                        <div className="flex flex-col items-center space-y-40 pb-32 pt-20 relative z-10 min-w-max">
-                            {treeStructure.generations.length > 0 ? (
-                                treeStructure.generations.map((gen, genIdx) => (
-                                    <div key={genIdx} className="flex items-center gap-16 flex-nowrap">
-                                        {gen.map(person => {
-                                            const personIsChild = (treeStructure.parentsOf[person.id] || []).length > 0;
-                                            return (
-                                                <TreeNode
-                                                    key={person.id}
-                                                    ref={el => { if (el) nodeRefs.current[person.id] = el; }}
-                                                    person={person}
-                                                    isActive={selectedMember?.id === person.id}
-                                                    isChild={personIsChild}
-                                                    alwaysShowAdd={isAppView}
-                                                    onAddClick={handleAddClick}
-                                                    onClick={() => handleNodeClick(person)}
-                                                />
-                                            );
-                                        })}
-                                    </div>
-                                ))
+                        <div className={`flex flex-col items-center ${isAppView ? 'space-y-24 pb-40 pt-24' : 'space-y-40 pb-32 pt-20'} relative z-10 min-w-max`}>
+                            {(isAppView ? visibleGenerations : treeStructure.generations).length > 0 ? (
+                                (isAppView ? visibleGenerations : treeStructure.generations).map((gen, genIdx, allGens) => {
+                                    if (isAppView) {
+                                        const units = groupGenerationUnits(gen, treeStructure.spouseOf);
+                                        const isLastGen = genIdx === allGens.length - 1;
+                                        const addChildParent = selectedMember
+                                            || persons.find((p) => isYou(p, currentUserId))
+                                            || gen[0];
+                                        return (
+                                            <div key={genIdx} className="flex items-end gap-10 flex-nowrap">
+                                                {units.map((unit) => {
+                                                    if (unit.type === 'couple') {
+                                                        const carded = isYou(unit.a, currentUserId) || isYou(unit.b, currentUserId)
+                                                            || selectedMember?.id === unit.a.id
+                                                            || selectedMember?.id === unit.b.id;
+                                                        return (
+                                                            <AppCoupleUnit
+                                                                key={`${unit.a.id}-${unit.b.id}`}
+                                                                a={unit.a}
+                                                                b={unit.b}
+                                                                selectedId={selectedMember?.id}
+                                                                currentUserId={currentUserId}
+                                                                carded={carded}
+                                                                setNodeRef={(id, el) => { if (el) nodeRefs.current[id] = el; }}
+                                                                onSelect={handleNodeClick}
+                                                            />
+                                                        );
+                                                    }
+                                                    return (
+                                                        <AppAvatarNode
+                                                            key={unit.person.id}
+                                                            ref={(el) => { if (el) nodeRefs.current[unit.person.id] = el; }}
+                                                            person={unit.person}
+                                                            isActive={selectedMember?.id === unit.person.id}
+                                                            isCurrentUser={isYou(unit.person, currentUserId)}
+                                                            onClick={() => handleNodeClick(unit.person)}
+                                                        />
+                                                    );
+                                                })}
+                                                {isLastGen && addChildParent && (
+                                                    <AppAddChildNode
+                                                        onClick={() => openAddModal(addChildParent, 'child')}
+                                                    />
+                                                )}
+                                            </div>
+                                        );
+                                    }
+
+                                    return (
+                                        <div key={genIdx} className="flex items-center gap-16 flex-nowrap">
+                                            {gen.map(person => {
+                                                const personIsChild = (treeStructure.parentsOf[person.id] || []).length > 0;
+                                                return (
+                                                    <TreeNode
+                                                        key={person.id}
+                                                        ref={el => { if (el) nodeRefs.current[person.id] = el; }}
+                                                        person={person}
+                                                        isActive={selectedMember?.id === person.id}
+                                                        isChild={personIsChild}
+                                                        alwaysShowAdd={false}
+                                                        onAddClick={handleAddClick}
+                                                        onClick={() => handleNodeClick(person)}
+                                                    />
+                                                );
+                                            })}
+                                        </div>
+                                    );
+                                })
                             ) : (
                                 /* Empty state */
                                 <div className="flex flex-col items-center space-y-6 py-24">
@@ -746,8 +884,7 @@ const FamilyTree = () => {
                                     </button>
                                 </div>
                             )}
-                        </div>
-                    </div>
+                        </div>                    </div>
                 </div>
             </div>
 
