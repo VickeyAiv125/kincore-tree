@@ -6,6 +6,9 @@ import {
     AppAddChildNode,
     AppAvatarNode,
     AppCoupleUnit,
+    AppMemberProfileSheet,
+    AppTreeHeader,
+    AppTreeMemberSearch,
     AppTreeTabs,
     getLoggedInUserId,
     groupGenerationUnits,
@@ -295,11 +298,15 @@ const FamilyTree = () => {
     // Data
     const [persons, setPersons] = useState([]);
     const [relationships, setRelationships] = useState([]);
+    const [familyName, setFamilyName] = useState('');
     const [activeFamilySpaceId, setActiveFamilySpaceId] = useState('');
     const [addModal, setAddModal] = useState(null);
     const [treeStructure, setTreeStructure] = useState({ generations: [], childrenOf: {}, parentsOf: {}, spouseOf: {}, personMap: new Map() });
     const [selectedMember, setSelectedMember] = useState(null);
     const [loading, setLoading] = useState(true);
+    const [memberSearchOpen, setMemberSearchOpen] = useState(false);
+    const [memberSearchQuery, setMemberSearchQuery] = useState('');
+    const [appProfileMember, setAppProfileMember] = useState(null);
 
     // UI
     const [zoom, setZoom] = useState(1);
@@ -452,6 +459,7 @@ const FamilyTree = () => {
             const r = data.relationships || [];
             setPersons(p);
             setRelationships(r);
+            if (data.family_name) setFamilyName(String(data.family_name));
             if (p.length > 0) {
                 setSelectedMember((prev) => prev || mapToMember(p[0]));
             }
@@ -484,18 +492,43 @@ const FamilyTree = () => {
         const wRect = wrapper.getBoundingClientRect();
         const z = zoomRef.current; // zoom scaling factor
         const lines = [];
+        const processedParents = new Set();
 
         treeStructure.generations.forEach(gen => {
             gen.forEach(person => {
-                const childIds = treeStructure.childrenOf[person.id] || [];
+                if (processedParents.has(person.id)) return;
+
+                const spouseIds = treeStructure.spouseOf[person.id] || [];
+                const spouseId = spouseIds.find((sid) => gen.some((p) => p.id === sid));
+                if (spouseId) processedParents.add(spouseId);
+                processedParents.add(person.id);
+
+                const childIdSet = new Set(treeStructure.childrenOf[person.id] || []);
+                if (spouseId) {
+                    (treeStructure.childrenOf[spouseId] || []).forEach((id) => childIdSet.add(id));
+                }
+                const childIds = [...childIdSet];
                 if (!childIds.length) return;
+
                 const parentEl = nodeRefs.current[person.id];
                 if (!parentEl) return;
 
                 const pRect = parentEl.getBoundingClientRect();
-                // Divide by zoom to convert viewport coords => SVG local coords
-                const parentCX = ((pRect.left + pRect.right) / 2 - wRect.left) / z;
-                const parentBottom = (pRect.bottom - wRect.top) / z;
+                let parentCX;
+                let parentAttachY;
+
+                if (spouseId && nodeRefs.current[spouseId]) {
+                    // Drop from couple heart (center gap — labels sit under each avatar)
+                    const sRect = nodeRefs.current[spouseId].getBoundingClientRect();
+                    const aCX = (pRect.left + pRect.right) / 2;
+                    const bCX = (sRect.left + sRect.right) / 2;
+                    parentCX = ((aCX + bCX) / 2 - wRect.left) / z;
+                    parentAttachY = (Math.min(pRect.top, sRect.top) + 34 - wRect.top) / z;
+                } else {
+                    parentCX = ((pRect.left + pRect.right) / 2 - wRect.left) / z;
+                    // Start below name + age so the stem never crosses labels
+                    parentAttachY = (pRect.bottom - wRect.top) / z;
+                }
 
                 const childCenters = childIds.map(cid => {
                     const el = nodeRefs.current[cid];
@@ -509,13 +542,12 @@ const FamilyTree = () => {
 
                 if (!childCenters.length) return;
 
-                // The midY is halfway between parent and its children row
-                const midY = parentBottom + (childCenters[0].top - parentBottom) / 2;
+                // Bridge halfway between parents and children
+                const midY = parentAttachY + (childCenters[0].top - parentAttachY) / 2;
 
-                // Vertical line from parent to the bridge
-                lines.push({ x1: parentCX, y1: parentBottom, x2: parentCX, y2: midY });
+                // Vertical from parent (or couple heart) down to the horizontal bridge
+                lines.push({ x1: parentCX, y1: parentAttachY, x2: parentCX, y2: midY });
 
-                // The bridge must span from the leftmost child/parent to the rightmost child/parent
                 const allX = [parentCX, ...childCenters.map(c => c.cx)];
                 const minX = Math.min(...allX);
                 const maxX = Math.max(...allX);
@@ -524,7 +556,6 @@ const FamilyTree = () => {
                     lines.push({ x1: minX, y1: midY, x2: maxX, y2: midY });
                 }
 
-                // Vertical lines from the bridge down to each child
                 childCenters.forEach(c => {
                     lines.push({ x1: c.cx, y1: midY, x2: c.cx, y2: c.top });
                 });
@@ -628,7 +659,25 @@ const FamilyTree = () => {
         }
     };
 
-    const handleNodeClick = (person) => setSelectedMember(mapToMember(person));
+    const handleNodeClick = (person) => {
+        const mapped = mapToMember(person);
+        setSelectedMember(mapped);
+        if (isAppView) {
+            setAppProfileMember(mapped);
+            setMemberSearchOpen(false);
+        }
+    };
+
+    const memberSearchResults = useMemo(() => {
+        const q = memberSearchQuery.trim().toLowerCase();
+        if (!q) return [];
+        return persons.filter((p) => {
+            const name = getPersonName(p).toLowerCase();
+            const first = String(p.first_name || '').toLowerCase();
+            const last = String(p.last_name || '').toLowerCase();
+            return name.includes(q) || first.includes(q) || last.includes(q);
+        }).slice(0, 20);
+    }, [persons, memberSearchQuery]);
 
     const handleSave = async () => {
         if (!selectedMember?.id) return;
@@ -684,14 +733,38 @@ const FamilyTree = () => {
                     </div>
                 )}
 
-                {/* App chrome: view tabs */}
+                {/* App chrome: header + tabs (mockup) */}
                 {isAppView && (
-                    <div className="fixed top-3 left-0 right-0 z-30 px-4 pointer-events-none">
-                        <div className="pointer-events-auto max-w-lg mx-auto">
+                    <div className="fixed top-0 left-0 right-0 z-30 px-3 pt-3 pb-2 bg-gradient-to-b from-[#F7F5F2] via-[#F7F5F2]/96 to-transparent pointer-events-none">
+                        <div className="pointer-events-auto max-w-lg mx-auto space-y-3">
+                            <AppTreeHeader
+                                familyName={familyName || 'Family Tree'}
+                                generations={totalGenerations}
+                                members={totalMembers}
+                                searchActive={memberSearchOpen}
+                                onSearchClick={() => {
+                                    setMemberSearchOpen((v) => !v);
+                                    if (memberSearchOpen) setMemberSearchQuery('');
+                                }}
+                            />
+                            <AppTreeMemberSearch
+                                open={memberSearchOpen}
+                                query={memberSearchQuery}
+                                onQueryChange={setMemberSearchQuery}
+                                results={memberSearchResults}
+                                onClose={() => {
+                                    setMemberSearchOpen(false);
+                                    setMemberSearchQuery('');
+                                }}
+                                onSelect={(person) => {
+                                    const mapped = mapToMember(person);
+                                    setSelectedMember(mapped);
+                                    setAppProfileMember(mapped);
+                                    setMemberSearchOpen(false);
+                                    setMemberSearchQuery('');
+                                }}
+                            />
                             <AppTreeTabs value={treeViewMode} onChange={setTreeViewMode} />
-                            <p className="mt-2 text-center text-[11px] font-semibold text-[#8A8794]">
-                                {totalGenerations} Generations • {totalMembers} Members
-                            </p>
                         </div>
                     </div>
                 )}
@@ -711,28 +784,43 @@ const FamilyTree = () => {
                     </div>
                 )}
 
-                {/* Zoom Controls */}
-                <div className={`fixed z-30 flex flex-col space-y-1 ${
+                {/* Zoom Controls — mockup: two separate white circles */}
+                <div className={`fixed z-30 flex flex-col ${
                     isAppView
-                        ? 'left-4 bottom-6'
-                        : 'top-4 right-[368px]'
+                        ? 'left-4 bottom-7 gap-2.5'
+                        : 'top-4 right-[368px] space-y-1'
                 }`}>
-                    <div className={`bg-white/95 dark:bg-brand-darkCard/80 backdrop-blur-md ${isAppView ? 'p-1 rounded-full shadow-lg border border-[#EFEAE4]' : 'p-1.5 rounded-2xl border border-gray-100 dark:border-brand-darkBorder shadow-xl'} flex flex-col space-y-0.5`}>
-                        <button onClick={() => handleZoom(0.1)} className={`${isAppView ? 'p-3' : 'p-2.5'} hover:bg-gray-100 dark:hover:bg-brand-darkBg ${isAppView ? 'rounded-full' : 'rounded-xl'} text-gray-500 hover:text-[#FF622E] transition-colors`} title="Zoom In">
-                            <Plus size={18} strokeWidth={2.5} />
-                        </button>
-                        <button onClick={() => handleZoom(-0.1)} className={`${isAppView ? 'p-3' : 'p-2.5'} hover:bg-gray-100 dark:hover:bg-brand-darkBg ${isAppView ? 'rounded-full' : 'rounded-xl'} text-gray-500 hover:text-[#FF622E] transition-colors`} title="Zoom Out">
-                            <Minus size={18} strokeWidth={2.5} />
-                        </button>
-                        {!isAppView && (
-                            <>
-                                <div className="h-px bg-gray-100 dark:bg-brand-darkBorder mx-1.5" />
-                                <button onClick={resetView} className="p-2.5 hover:bg-gray-100 dark:hover:bg-brand-darkBg rounded-xl text-gray-400 hover:text-brand-orange transition-colors" title="Reset View">
-                                    <RefreshCw size={16} strokeWidth={3} />
-                                </button>
-                            </>
-                        )}
-                    </div>
+                    {isAppView ? (
+                        <>
+                            <button
+                                onClick={() => handleZoom(0.1)}
+                                className="w-11 h-11 rounded-full bg-white text-[#1F1D2B] shadow-[0_6px_18px_rgba(26,28,46,0.12)] border border-[#EEEAE4] flex items-center justify-center active:scale-95"
+                                title="Zoom In"
+                            >
+                                <Plus size={20} strokeWidth={2.4} />
+                            </button>
+                            <button
+                                onClick={() => handleZoom(-0.1)}
+                                className="w-11 h-11 rounded-full bg-white text-[#1F1D2B] shadow-[0_6px_18px_rgba(26,28,46,0.12)] border border-[#EEEAE4] flex items-center justify-center active:scale-95"
+                                title="Zoom Out"
+                            >
+                                <Minus size={20} strokeWidth={2.4} />
+                            </button>
+                        </>
+                    ) : (
+                        <div className="bg-white/95 dark:bg-brand-darkCard/80 backdrop-blur-md p-1.5 rounded-2xl border border-gray-100 dark:border-brand-darkBorder shadow-xl flex flex-col space-y-0.5">
+                            <button onClick={() => handleZoom(0.1)} className="p-2.5 hover:bg-gray-100 dark:hover:bg-brand-darkBg rounded-xl text-gray-500 hover:text-[#FF622E] transition-colors" title="Zoom In">
+                                <Plus size={18} strokeWidth={2.5} />
+                            </button>
+                            <button onClick={() => handleZoom(-0.1)} className="p-2.5 hover:bg-gray-100 dark:hover:bg-brand-darkBg rounded-xl text-gray-500 hover:text-[#FF622E] transition-colors" title="Zoom Out">
+                                <Minus size={18} strokeWidth={2.5} />
+                            </button>
+                            <div className="h-px bg-gray-100 dark:bg-brand-darkBorder mx-1.5" />
+                            <button onClick={resetView} className="p-2.5 hover:bg-gray-100 dark:hover:bg-brand-darkBg rounded-xl text-gray-400 hover:text-brand-orange transition-colors" title="Reset View">
+                                <RefreshCw size={16} strokeWidth={3} />
+                            </button>
+                        </div>
+                    )}
                 </div>
 
                 {/* App Add Person FAB */}
@@ -745,11 +833,11 @@ const FamilyTree = () => {
                                 || persons[0];
                             if (focus) openAddModal(focus);
                         }}
-                        className="fixed right-4 bottom-6 z-30 w-14 h-14 rounded-full bg-[#FF622E] text-white shadow-xl shadow-orange-300/50 flex items-center justify-center active:scale-95 transition-transform"
+                        className="fixed right-4 bottom-7 z-30 w-[58px] h-[58px] rounded-full bg-[#FF6A2B] text-white shadow-[0_10px_28px_rgba(255,106,43,0.45)] flex items-center justify-center active:scale-95 transition-transform"
                         title="Add family member"
                         aria-label="Add family member"
                     >
-                        <UserRoundPlus size={24} strokeWidth={2.25} />
+                        <UserRoundPlus size={26} strokeWidth={2.2} />
                     </button>
                 )}
 
@@ -796,7 +884,7 @@ const FamilyTree = () => {
                         )}
 
                         {/* Tree Generations — each generation = ONE horizontal non-wrapping row */}
-                        <div className={`flex flex-col items-center ${isAppView ? 'space-y-24 pb-40 pt-24' : 'space-y-40 pb-32 pt-20'} relative z-10 min-w-max`}>
+                        <div className={`flex flex-col items-center ${isAppView ? 'space-y-[88px] pb-44 pt-36' : 'space-y-40 pb-32 pt-20'} relative z-10 min-w-max`}>
                             {(isAppView ? visibleGenerations : treeStructure.generations).length > 0 ? (
                                 (isAppView ? visibleGenerations : treeStructure.generations).map((gen, genIdx, allGens) => {
                                     if (isAppView) {
@@ -899,6 +987,17 @@ const FamilyTree = () => {
                 onBack={() => setAddModal((prev) => ({ ...prev, step: 'menu', addType: null }))}
                 onSuccess={handleAddSuccess}
             />
+
+            {isAppView && (
+                <AppMemberProfileSheet
+                    member={appProfileMember}
+                    onClose={() => setAppProfileMember(null)}
+                    onAddRelative={(member) => {
+                        setAppProfileMember(null);
+                        openAddModal(member);
+                    }}
+                />
+            )}
 
             {/* ── RIGHT SIDEBAR ── */}
             {/* Fixed to the viewport right edge — never moves regardless of tree state */}

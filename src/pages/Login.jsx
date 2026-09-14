@@ -202,7 +202,7 @@ const Login = () => {
                             disabled={socialBusy}
                             className="w-full flex items-center justify-center py-4 px-4 rounded-full border border-gray-900/10 bg-gray-900 text-sm font-bold text-white hover:bg-black transition-all active:scale-[0.99] disabled:opacity-60"
                         >
-                            <span>Continue with KCC</span>
+                            <span>Continue with KCCID</span>
                         </button>
                     </div>
 
@@ -299,7 +299,7 @@ const Login = () => {
                     </form>
 
                     <p className="mt-6 text-center text-xs text-gray-400 font-medium">
-                        New here? Google, Facebook, or KCC Sign-In creates your account automatically.
+                        New here? Google, Facebook, or KCCID Sign-In creates your account automatically.
                     </p>
                 </div>
             </div>
@@ -317,7 +317,7 @@ const Login = () => {
                         </button>
                         <div className="mb-6 text-left">
                             <p className="text-[10px] font-black uppercase tracking-widest text-brand-orange mb-2">KCC ID</p>
-                            <h3 className="text-xl font-extrabold text-gray-900 dark:text-brand-darkText">Continue with KCC</h3>
+                            <h3 className="text-xl font-extrabold text-gray-900 dark:text-brand-darkText">Continue with KCCID</h3>
                             <p className="text-xs text-gray-500 mt-2 font-medium">
                                 Use your ecosystem KCC ID (client: kincore). Kincore admin emails such as auditor@admin.com are not KCC accounts — use Email / username on the main login form.
                             </p>
@@ -363,7 +363,7 @@ const Login = () => {
                                 disabled={kccLoading}
                                 className="w-full py-4 rounded-full bg-brand-orange text-white text-sm font-bold hover:opacity-95 disabled:opacity-60"
                             >
-                                {kccLoading ? 'Signing in…' : 'Sign in with KCC'}
+                                {kccLoading ? 'Signing in…' : 'Sign in with KCCID'}
                             </button>
                         </form>
                     </div>

@@ -76,6 +76,52 @@ const validateEmail = (email) => {
     return null;
 };
 
+/** Parse YYYY-MM-DD or MM/DD/YYYY / DD/MM/YYYY-ish into Date at UTC noon, or null. */
+const parseDob = (raw) => {
+    if (!raw || typeof raw !== 'string') return null;
+    const s = raw.trim();
+    if (!s || s.toLowerCase() === 'unknown' || s.toLowerCase() === 'null') return null;
+    const iso = s.match(/^(\d{4})-(\d{1,2})-(\d{1,2})$/);
+    if (iso) {
+        const d = new Date(Date.UTC(+iso[1], +iso[2] - 1, +iso[3], 12));
+        return Number.isNaN(d.getTime()) ? null : d;
+    }
+    const slash = s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+    if (slash) {
+        // Prefer MM/DD/YYYY (HTML date picker display / US forms in this modal)
+        const d = new Date(Date.UTC(+slash[3], +slash[1] - 1, +slash[2], 12));
+        return Number.isNaN(d.getTime()) ? null : d;
+    }
+    const d = new Date(s);
+    return Number.isNaN(d.getTime()) ? null : d;
+};
+
+const getPersonDob = (person) =>
+    parseDob(person?.birth_date || person?.date_of_birth || person?.dob || '');
+
+/**
+ * Parent must be born before the target (child/self).
+ * Child must be born after the target (parent/self).
+ */
+const validateRelationDob = (addType, formDobRaw, targetPerson) => {
+    const formDob = parseDob(formDobRaw);
+    if (!formDob) return null; // optional field — skip if empty
+    const targetDob = getPersonDob(targetPerson);
+    if (!targetDob) return null; // no baseline to compare
+
+    if (addType === 'parent') {
+        if (formDob.getTime() >= targetDob.getTime()) {
+            return 'Parent date of birth must be earlier than this person’s date of birth.';
+        }
+    }
+    if (addType === 'child') {
+        if (formDob.getTime() <= targetDob.getTime()) {
+            return 'Child date of birth must be later than this person’s date of birth.';
+        }
+    }
+    return null;
+};
+
 const uploadPersonPhoto = async (file, familySpaceId) => {
     const fd = new FormData();
     fd.append('file', file);
@@ -92,7 +138,7 @@ const uploadPersonPhoto = async (file, familySpaceId) => {
     return data.media?.url || data.url || '';
 };
 
-const Field = ({ label, name, type = 'text', value, onChange, placeholder, required }) => (
+const Field = ({ label, name, type = 'text', value, onChange, placeholder, required, min, max }) => (
     <div className="space-y-1.5">
         <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">{label}</label>
         <input
@@ -102,6 +148,8 @@ const Field = ({ label, name, type = 'text', value, onChange, placeholder, requi
             onChange={onChange}
             placeholder={placeholder}
             required={required}
+            min={min}
+            max={max}
             className="w-full bg-gray-50 dark:bg-brand-darkBg/50 border border-gray-100 dark:border-brand-darkBorder rounded-2xl py-3.5 px-4 text-sm font-semibold text-gray-800 dark:text-brand-darkText outline-none focus:ring-4 focus:ring-brand-orange/10"
         />
     </div>
@@ -343,6 +391,12 @@ const TreeNodeAddModal = ({
             return;
         }
 
+        const dobError = validateRelationDob(addType, form.date_of_birth, person);
+        if (dobError) {
+            setError(dobError);
+            return;
+        }
+
         setLoading(true);
         setLoadingLabel('Save');
         setError('');
@@ -415,58 +469,47 @@ const TreeNodeAddModal = ({
                 <div className="overflow-y-auto flex-1 px-6 py-5">
                     {step === 'menu' && (
                         <div className="grid grid-cols-1 gap-3">
-                            <button
-                                type="button"
-                                onClick={() => onSelectType('spouse')}
-                                className="flex items-center gap-4 p-4 rounded-2xl bg-pink-50 dark:bg-pink-500/10 border border-pink-100 dark:border-pink-500/20 text-left hover:scale-[1.01] transition-transform"
-                            >
-                                <div className="w-10 h-10 rounded-xl bg-pink-500 text-white flex items-center justify-center">
-                                    <Heart size={18} />
-                                </div>
-                                <div>
-                                    <p className="text-sm font-black text-gray-900 dark:text-brand-darkText">Add Spouse</p>
-                                    <p className="text-[10px] text-gray-400">Link as life partner</p>
-                                </div>
-                            </button>
-                            <button
-                                type="button"
-                                onClick={() => onSelectType('parent')}
-                                className="flex items-center gap-4 p-4 rounded-2xl bg-gray-50 dark:bg-brand-darkBg border border-gray-100 dark:border-brand-darkBorder text-left hover:scale-[1.01] transition-transform"
-                            >
-                                <div className="w-10 h-10 rounded-xl bg-gray-900 text-white flex items-center justify-center">
-                                    <User size={18} />
-                                </div>
-                                <div>
-                                    <p className="text-sm font-black text-gray-900 dark:text-brand-darkText">Add Parent</p>
-                                    <p className="text-[10px] text-gray-400">Add mother or father</p>
-                                </div>
-                            </button>
-                            <button
-                                type="button"
-                                onClick={() => onSelectType('child')}
-                                className="flex items-center gap-4 p-4 rounded-2xl bg-blue-50 dark:bg-blue-500/10 border border-blue-100 dark:border-blue-500/20 text-left hover:scale-[1.01] transition-transform"
-                            >
-                                <div className="w-10 h-10 rounded-xl bg-blue-500 text-white flex items-center justify-center">
-                                    <Baby size={18} />
-                                </div>
-                                <div>
-                                    <p className="text-sm font-black text-gray-900 dark:text-brand-darkText">Add Child</p>
-                                    <p className="text-[10px] text-gray-400">Add son or daughter</p>
-                                </div>
-                            </button>
-                            <button
-                                type="button"
-                                onClick={() => onSelectType('member')}
-                                className="flex items-center gap-4 p-4 rounded-2xl bg-orange-50 dark:bg-brand-orange/10 border border-orange-100 dark:border-brand-orange/20 text-left hover:scale-[1.01] transition-transform"
-                            >
-                                <div className="w-10 h-10 rounded-xl bg-brand-orange text-white flex items-center justify-center">
-                                    <User size={18} />
-                                </div>
-                                <div>
-                                    <p className="text-sm font-black text-gray-900 dark:text-brand-darkText">Add Member</p>
-                                    <p className="text-[10px] text-gray-400">Add related family member</p>
-                                </div>
-                            </button>
+                            {[
+                                {
+                                    type: 'spouse',
+                                    title: 'Add Spouse',
+                                    subtitle: 'Link as life partner',
+                                    Icon: Heart,
+                                },
+                                {
+                                    type: 'parent',
+                                    title: 'Add Parent',
+                                    subtitle: 'Add mother or father',
+                                    Icon: User,
+                                },
+                                {
+                                    type: 'child',
+                                    title: 'Add Child',
+                                    subtitle: 'Add son or daughter',
+                                    Icon: Baby,
+                                },
+                                {
+                                    type: 'member',
+                                    title: 'Add Member',
+                                    subtitle: 'Add related family member',
+                                    Icon: User,
+                                },
+                            ].map(({ type, title, subtitle, Icon }) => (
+                                <button
+                                    key={type}
+                                    type="button"
+                                    onClick={() => onSelectType(type)}
+                                    className="flex items-center gap-4 p-4 rounded-2xl bg-[#FFF0EB] border border-[#FFD5C7] text-left hover:bg-[#FFE4DB] hover:scale-[1.01] active:scale-[0.99] transition-all"
+                                >
+                                    <div className="w-10 h-10 rounded-xl bg-[#FF622E] text-white flex items-center justify-center shadow-sm shadow-[#FF622E]/25">
+                                        <Icon size={18} />
+                                    </div>
+                                    <div>
+                                        <p className="text-sm font-black text-gray-900 dark:text-brand-darkText">{title}</p>
+                                        <p className="text-[10px] text-gray-400">{subtitle}</p>
+                                    </div>
+                                </button>
+                            ))}
                         </div>
                     )}
 
@@ -511,7 +554,19 @@ const TreeNodeAddModal = ({
                             {addType === 'parent' && (
                                 <>
                                     <div className="grid grid-cols-2 gap-3">
-                                        <Field label="Date of birth" name="date_of_birth" type="date" value={form.date_of_birth} onChange={handleChange} />
+                                        <Field
+                                            label="Date of birth"
+                                            name="date_of_birth"
+                                            type="date"
+                                            value={form.date_of_birth}
+                                            onChange={handleChange}
+                                            max={(() => {
+                                                const d = getPersonDob(person);
+                                                if (!d) return undefined;
+                                                const prev = new Date(d.getTime() - 86400000);
+                                                return prev.toISOString().slice(0, 10);
+                                            })()}
+                                        />
                                         <Field label="Anniversary date" name="anniversary_date" type="date" value={form.anniversary_date} onChange={handleChange} />
                                     </div>
                                     <Field label="Place of birth" name="place_of_birth" value={form.place_of_birth} onChange={handleChange} placeholder="City, country" />
@@ -533,7 +588,19 @@ const TreeNodeAddModal = ({
 
                             {addType === 'child' && (
                                 <>
-                                    <Field label="Date of birth" name="date_of_birth" type="date" value={form.date_of_birth} onChange={handleChange} />
+                                    <Field
+                                        label="Date of birth"
+                                        name="date_of_birth"
+                                        type="date"
+                                        value={form.date_of_birth}
+                                        onChange={handleChange}
+                                        min={(() => {
+                                            const d = getPersonDob(person);
+                                            if (!d) return undefined;
+                                            const next = new Date(d.getTime() + 86400000);
+                                            return next.toISOString().slice(0, 10);
+                                        })()}
+                                    />
                                     <div className="grid grid-cols-2 gap-3">
                                         <Field label="Place of birth" name="place_of_birth" value={form.place_of_birth} onChange={handleChange} placeholder="City, country" />
                                         <Field label="Anniversary date" name="anniversary_date" type="date" value={form.anniversary_date} onChange={handleChange} />
