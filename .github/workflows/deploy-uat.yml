@@ -37,13 +37,21 @@ jobs:
           chmod 600 ~/.ssh/uat_key
           ssh-keyscan -p "${{ secrets.UAT_SSH_PORT || 22 }}" -H "${{ secrets.UAT_HOST }}" >> ~/.ssh/known_hosts
 
-      - name: Rsync dist to uat-admin.kincore.com
+      - name: Deploy to uat-admin (nginx proxies to Coolify :8114)
         env:
           HOST: ${{ secrets.UAT_HOST }}
           USER: ${{ secrets.UAT_USER }}
           PORT: ${{ secrets.UAT_SSH_PORT || 22 }}
         run: |
-          # nginx root for uat-admin.kincore.com must match this path (see sites-available/uat-admin.kincore.com)
-          rsync -avz --delete \
-            -e "ssh -i ~/.ssh/uat_key -p ${PORT} -o IdentitiesOnly=yes" \
-            ./dist/ "${USER}@${HOST}:/var/www/uat-admin.kincore.com/"
+          RSYNC="rsync -avz --delete -e \"ssh -i ~/.ssh/uat_key -p ${PORT} -o IdentitiesOnly=yes\""
+          eval $RSYNC ./dist/ "${USER}@${HOST}:/tmp/kincore-uat-admin-dist/"
+          ssh -i ~/.ssh/uat_key -p "${PORT}" -o IdentitiesOnly=yes "${USER}@${HOST}" '
+            set -e
+            CONTAINER=$(docker ps --filter publish=8114 --format "{{.Names}}" | head -1)
+            if [ -z "$CONTAINER" ]; then
+              echo "No container publishing host port 8114 (uat-admin proxy target)" >&2
+              exit 1
+            fi
+            docker cp /tmp/kincore-uat-admin-dist/. "${CONTAINER}:/usr/share/nginx/html/"
+            rsync -a --delete /tmp/kincore-uat-admin-dist/ /var/www/uat-admin.kincore.com/ 2>/dev/null || true
+          '
