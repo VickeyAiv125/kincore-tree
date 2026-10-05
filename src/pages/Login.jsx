@@ -71,33 +71,40 @@ const Login = () => {
         window.location.href = `${API}/auth/facebook?mode=login&client_type=web`;
     };
 
+    const signInWithKcc = async (id, pass) => {
+        const res = await fetch(`${API}/auth/kcc/login`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ identifier: id, password: pass })
+        });
+        const raw = await res.text();
+        let data = {};
+        try {
+            data = raw ? JSON.parse(raw) : {};
+        } catch {
+            throw new Error(
+                res.status === 404
+                    ? 'KCC login API not found on this server. Deploy the latest backend, or use local API (VITE_API_BASE_URL=http://localhost:5000/api).'
+                    : `Server returned a non-JSON response (${res.status}). Check API URL: ${API}`
+            );
+        }
+        if (!res.ok) throw new Error(data.error || 'KCC ID login failed');
+        return data;
+    };
+
+    const clearSessionKeepTheme = () => {
+        const currentTheme = localStorage.getItem('theme');
+        localStorage.clear();
+        if (currentTheme) localStorage.setItem('theme', currentTheme);
+    };
+
     const handleKccLogin = async (e) => {
         e.preventDefault();
         setKccError('');
         setKccLoading(true);
         try {
-            const currentTheme = localStorage.getItem('theme');
-            localStorage.clear();
-            if (currentTheme) localStorage.setItem('theme', currentTheme);
-
-            const res = await fetch(`${API}/auth/kcc/login`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ identifier: kccId, password: kccPassword })
-            });
-            const raw = await res.text();
-            let data = {};
-            try {
-                data = raw ? JSON.parse(raw) : {};
-            } catch {
-                throw new Error(
-                    res.status === 404
-                        ? 'KCC login API not found on this server. Deploy the latest backend, or use local API (VITE_API_BASE_URL=http://localhost:5000/api).'
-                        : `Server returned a non-JSON response (${res.status}). Check API URL: ${API}`
-                );
-            }
-            if (!res.ok) throw new Error(data.error || 'KCC ID login failed');
-
+            clearSessionKeepTheme();
+            const data = await signInWithKcc(kccId.trim(), kccPassword);
             persistSession(data);
             setKccOpen(false);
             routeForRole(data.user?.role, navigate);
@@ -114,39 +121,13 @@ const Login = () => {
         setLoginError('');
 
         const trimmed = identifier.trim();
-        if (!trimmed.includes('@') && /^kcc/i.test(trimmed)) {
-            setKccId(trimmed);
-            setKccOpen(true);
-            setLoginError('Use the KCC button below to sign in with your KCC ID.');
-            return;
-        }
-
-        const currentTheme = localStorage.getItem('theme');
-        localStorage.clear();
-        if (currentTheme) localStorage.setItem('theme', currentTheme);
+        clearSessionKeepTheme();
 
         setLoginLoading(true);
         try {
-            const response = await fetch(`${API}/auth/login`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ identifier: trimmed, password })
-            });
-
-            const raw = await response.text();
-            let data = {};
-            try {
-                data = raw ? JSON.parse(raw) : {};
-            } catch {
-                throw new Error(`Server returned an unexpected response (${response.status}).`);
-            }
-
-            if (response.ok) {
-                persistSession(data);
-                routeForRole(data.user?.role, navigate);
-            } else {
-                setLoginError(data.error || 'Login failed. Check your email or username and password.');
-            }
+            const data = await signInWithKcc(trimmed, password);
+            persistSession(data);
+            routeForRole(data.user?.role, navigate);
         } catch (err) {
             console.error('Login error:', err);
             setLoginError(err.message || 'Could not connect to the server. Please try again.');
@@ -208,7 +189,7 @@ const Login = () => {
 
                     <div className="flex items-center gap-4 my-8">
                         <div className="h-px flex-1 bg-gray-100 dark:bg-brand-darkBorder" />
-                        <span className="text-[10px] font-black uppercase tracking-widest text-gray-400">or email / username</span>
+                        <span className="text-[10px] font-black uppercase tracking-widest text-gray-400">or KCC ID</span>
                         <div className="h-px flex-1 bg-gray-100 dark:bg-brand-darkBorder" />
                     </div>
 
@@ -299,7 +280,7 @@ const Login = () => {
                     </form>
 
                     <p className="mt-6 text-center text-xs text-gray-400 font-medium">
-                        New here? Google, Facebook, or KCCID Sign-In creates your account automatically.
+                        Sign in with your KCC ID. Google or Facebook also creates your account automatically.
                     </p>
                 </div>
             </div>
@@ -319,7 +300,7 @@ const Login = () => {
                             <p className="text-[10px] font-black uppercase tracking-widest text-brand-orange mb-2">KCC ID</p>
                             <h3 className="text-xl font-extrabold text-gray-900 dark:text-brand-darkText">Continue with KCCID</h3>
                             <p className="text-xs text-gray-500 mt-2 font-medium">
-                                Use your ecosystem KCC ID (client: kincore). Kincore admin emails such as auditor@admin.com are not KCC accounts — use Email / username on the main login form.
+                                Use your ecosystem KCC ID (client: kincore). The same sign-in is used on the main form.
                             </p>
                         </div>
                         <form className="space-y-4" onSubmit={handleKccLogin}>
