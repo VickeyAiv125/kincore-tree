@@ -100,7 +100,7 @@ const GenderBadge = ({ gender }) => {
     const male = gender === 'male';
     return (
         <span
-            className={`absolute bottom-0.5 right-0.5 w-[18px] h-[18px] rounded-full border-[2px] border-white flex items-center justify-center text-[9px] font-black shadow-sm ${
+            className={`absolute bottom-0.5 right-0.5 w-[18px] h-[18px] rounded-full border-[2px] border-white dark:border-brand-darkCard flex items-center justify-center text-[9px] font-black shadow-sm ${
                 male ? 'bg-[#5B9CFF] text-white' : 'bg-[#FF6BA8] text-white'
             }`}
             aria-hidden="true"
@@ -134,10 +134,10 @@ export const AppAvatarNode = React.forwardRef(function AppAvatarNode(
             )}
             {/* Circular portrait icon */}
             <span
-                className={`relative w-[68px] h-[68px] shrink-0 rounded-full bg-[#F3EDE6] ${
+                className={`relative w-[68px] h-[68px] shrink-0 rounded-full bg-[#F3EDE6] dark:bg-brand-darkBorder ${
                     isActive
-                        ? 'ring-[3px] ring-[#FF6A2B] ring-offset-[3px] ring-offset-white'
-                        : 'shadow-[0_6px_16px_rgba(26,28,46,0.12)] ring-[3px] ring-white'
+                        ? 'ring-[3px] ring-[#FF6A2B] ring-offset-[3px] ring-offset-white dark:ring-offset-[#12141C]'
+                        : 'shadow-[0_6px_16px_rgba(26,28,46,0.12)] ring-[3px] ring-white dark:ring-brand-darkBorder'
                 }`}
             >
                 <span className="absolute inset-0 rounded-full overflow-hidden">
@@ -151,13 +151,13 @@ export const AppAvatarNode = React.forwardRef(function AppAvatarNode(
                 <GenderBadge gender={gender} />
             </span>
             {/* Title below icon */}
-            <span className="block w-[88px] -mx-[6px] text-[13px] font-bold text-[#1F1D2B] leading-[1.2] truncate text-center mt-2">
+            <span className="block w-[88px] -mx-[6px] text-[13px] font-bold text-[#1F1D2B] dark:text-brand-darkText leading-[1.2] truncate text-center mt-2">
                 {name}
             </span>
             {life ? (
                 <span
                     className={`block w-[88px] -mx-[6px] text-[11px] font-semibold leading-[1.25] truncate text-center mt-0.5 ${
-                        life.accent ? 'text-[#FF6A2B]' : 'text-[#9A96A3]'
+                        life.accent ? 'text-[#FF6A2B]' : 'text-[#9A96A3] dark:text-brand-darkMuted'
                     }`}
                 >
                     {life.text}
@@ -197,8 +197,8 @@ export const AppCoupleUnit = ({
             >
                 <span className="absolute left-0 right-0 top-[33px] h-[2px] bg-[#FF8FB8] z-[1]" />
                 <span
-                    className={`relative z-10 w-7 h-7 rounded-full bg-[#FFE4EE] text-[#FF4F8D] flex items-center justify-center border-[2.5px] shadow-[0_2px_6px_rgba(255,79,141,0.28)] ${
-                        showCard ? 'border-white' : 'border-[#F4F2EF]'
+                    className={`relative z-10 w-7 h-7 rounded-full bg-[#FFE4EE] dark:bg-[#3A2430] text-[#FF4F8D] flex items-center justify-center border-[2.5px] shadow-[0_2px_6px_rgba(255,79,141,0.28)] ${
+                        showCard ? 'border-white dark:border-brand-darkCard' : 'border-[#F4F2EF] dark:border-[#12141C]'
                     }`}
                 >
                     <Heart size={12} fill="currentColor" strokeWidth={0} />
@@ -227,7 +227,7 @@ export const AppCoupleUnit = ({
                     '0 14px 34px rgba(255, 106, 43, 0.22), 0 4px 14px rgba(26, 28, 46, 0.08)',
             }}
         >
-            <div className="rounded-[23.5px] bg-white px-3.5 pt-4 pb-3.5">
+            <div className="rounded-[23.5px] bg-white dark:bg-brand-darkCard px-3.5 pt-4 pb-3.5">
                 {inner}
             </div>
         </div>
@@ -265,7 +265,7 @@ export const AppTreeTabs = ({ value, onChange, onFilterClick }) => {
                         className={`shrink-0 px-[18px] py-[9px] rounded-full text-[13px] font-semibold transition-colors ${
                             active
                                 ? 'bg-[#FF6A2B] text-white shadow-[0_6px_16px_rgba(255,106,43,0.35)]'
-                                : 'bg-white text-[#6F6A78] border border-[#E6E1DB]'
+                                : 'bg-white dark:bg-brand-darkCard text-[#6F6A78] dark:text-brand-darkMuted border border-[#E6E1DB] dark:border-brand-darkBorder'
                         }`}
                     >
                         {tab.label}
@@ -275,7 +275,7 @@ export const AppTreeTabs = ({ value, onChange, onFilterClick }) => {
             <button
                 type="button"
                 onClick={onFilterClick}
-                className="shrink-0 ml-auto w-9 h-9 rounded-full bg-white border border-[#E6E1DB] text-[#6F6A78] flex items-center justify-center"
+                className="shrink-0 ml-auto w-9 h-9 rounded-full bg-white dark:bg-brand-darkCard border border-[#E6E1DB] dark:border-brand-darkBorder text-[#6F6A78] dark:text-brand-darkMuted flex items-center justify-center"
                 aria-label="Filter"
             >
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round">
@@ -299,7 +299,7 @@ export const AppTreeHeader = ({
     <header className="flex items-center gap-2 px-1">
         <button
             type="button"
-            className="w-9 h-9 bg-transparent border-0 text-[#2A2734] flex items-center justify-center shrink-0 p-0"
+            className="w-9 h-9 bg-transparent border-0 text-[#2A2734] dark:text-brand-darkText flex items-center justify-center shrink-0 p-0"
             aria-label="Menu"
             onClick={() => {
                 try {
@@ -310,10 +310,10 @@ export const AppTreeHeader = ({
             <Menu size={22} strokeWidth={2.2} />
         </button>
         <div className="flex-1 min-w-0 text-center">
-            <h1 className="text-[17px] font-extrabold text-[#1F1D2B] truncate leading-tight">
+            <h1 className="text-[17px] font-extrabold text-[#1F1D2B] dark:text-brand-darkText truncate leading-tight">
                 {familyName}
             </h1>
-            <p className="text-[12px] font-medium text-[#9A96A3] mt-0.5">
+            <p className="text-[12px] font-medium text-[#9A96A3] dark:text-brand-darkMuted mt-0.5">
                 {generations} Generations • {members} Members
             </p>
         </div>
@@ -365,20 +365,20 @@ export const AppTreeMemberSearch = ({
     if (!open) return null;
 
     return (
-        <div className="mt-1 rounded-[18px] bg-white border border-[#EEEAE4] shadow-[0_12px_28px_rgba(40,30,20,0.12)] overflow-hidden">
-            <div className="flex items-center gap-2 px-3 py-2.5 border-b border-[#F0EBE5]">
+        <div className="mt-1 rounded-[18px] bg-white dark:bg-brand-darkCard border border-[#EEEAE4] dark:border-brand-darkBorder shadow-[0_12px_28px_rgba(40,30,20,0.12)] overflow-hidden">
+            <div className="flex items-center gap-2 px-3 py-2.5 border-b border-[#F0EBE5] dark:border-brand-darkBorder">
                 <Search size={16} className="text-[#9A96A3] shrink-0" />
                 <input
                     autoFocus
                     value={query}
                     onChange={(e) => onQueryChange?.(e.target.value)}
                     placeholder="Search family member..."
-                    className="flex-1 min-w-0 bg-transparent border-0 outline-none text-[14px] font-semibold text-[#1F1D2B] placeholder:text-[#B0ACB8]"
+                    className="flex-1 min-w-0 bg-transparent border-0 outline-none text-[14px] font-semibold text-[#1F1D2B] dark:text-brand-darkText placeholder:text-[#B0ACB8]"
                 />
                 <button
                     type="button"
                     onClick={onClose}
-                    className="w-8 h-8 rounded-full bg-[#F4F2EF] text-[#6F6A78] flex items-center justify-center border-0"
+                    className="w-8 h-8 rounded-full bg-[#F4F2EF] dark:bg-brand-darkBg text-[#6F6A78] dark:text-brand-darkMuted flex items-center justify-center border-0"
                     aria-label="Close search"
                 >
                     <X size={15} />
@@ -402,7 +402,7 @@ export const AppTreeMemberSearch = ({
                                 key={person.id}
                                 type="button"
                                 onClick={() => onSelect?.(person)}
-                                className="w-full text-left px-3 py-2.5 flex items-center gap-3 hover:bg-[#FFF6F1] border-0 bg-transparent border-b border-[#F7F3EE] last:border-0"
+                                className="w-full text-left px-3 py-2.5 flex items-center gap-3 hover:bg-[#FFF6F1] dark:hover:bg-brand-darkBg border-0 bg-transparent border-b border-[#F7F3EE] dark:border-brand-darkBorder last:border-0"
                             >
                                 <img
                                     src={getAvatar(person)}
@@ -410,7 +410,7 @@ export const AppTreeMemberSearch = ({
                                     className="w-11 h-11 rounded-full object-cover border-2 border-white shadow-sm"
                                 />
                                 <div className="flex-1 min-w-0">
-                                    <p className="text-[14px] font-bold text-[#1F1D2B] truncate">{name}</p>
+                                    <p className="text-[14px] font-bold text-[#1F1D2B] dark:text-brand-darkText truncate">{name}</p>
                                     <p className="text-[11px] font-medium text-[#9A96A3] truncate">
                                         {[person.gender, life?.text].filter(Boolean).join(' • ') || 'Family member'}
                                     </p>
@@ -448,17 +448,17 @@ export const AppMemberProfileSheet = ({
                 aria-label="Close profile"
                 onClick={onClose}
             />
-            <div className="relative w-full max-w-lg mx-auto rounded-t-[24px] bg-white shadow-2xl px-5 pt-3 pb-6 max-h-[78vh] overflow-y-auto">
-                <div className="w-10 h-1 rounded-full bg-[#E6E1DB] mx-auto mb-4" />
+            <div className="relative w-full max-w-lg mx-auto rounded-t-[24px] bg-white dark:bg-brand-darkCard shadow-2xl px-5 pt-3 pb-6 max-h-[78vh] overflow-y-auto">
+                <div className="w-10 h-1 rounded-full bg-[#E6E1DB] dark:bg-brand-darkBorder mx-auto mb-4" />
                 <div className="flex items-start justify-between gap-3 mb-4">
                     <div>
                         <p className="text-[11px] font-bold uppercase tracking-widest text-[#9A96A3]">Profile preview</p>
-                        <h2 className="text-[20px] font-extrabold text-[#1F1D2B] leading-tight mt-0.5">{name}</h2>
+                        <h2 className="text-[20px] font-extrabold text-[#1F1D2B] dark:text-brand-darkText leading-tight mt-0.5">{name}</h2>
                     </div>
                     <button
                         type="button"
                         onClick={onClose}
-                        className="w-9 h-9 rounded-full bg-[#F4F2EF] border-0 text-[#6F6A78] flex items-center justify-center shrink-0"
+                        className="w-9 h-9 rounded-full bg-[#F4F2EF] dark:bg-brand-darkBg border-0 text-[#6F6A78] dark:text-brand-darkMuted flex items-center justify-center shrink-0"
                         aria-label="Close"
                     >
                         <X size={16} />
@@ -482,17 +482,17 @@ export const AppMemberProfileSheet = ({
                 </div>
 
                 <div className="space-y-3 mb-5">
-                    <div className="flex items-center gap-2.5 text-[13px] text-[#2A2734]">
+                    <div className="flex items-center gap-2.5 text-[13px] text-[#2A2734] dark:text-brand-darkText">
                         <Cake size={16} className="text-[#9A96A3] shrink-0" />
                         <span className="font-medium text-[#9A96A3] w-20 shrink-0">Born</span>
                         <span className="font-semibold">{dob || '—'}</span>
                     </div>
-                    <div className="flex items-center gap-2.5 text-[13px] text-[#2A2734]">
+                    <div className="flex items-center gap-2.5 text-[13px] text-[#2A2734] dark:text-brand-darkText">
                         <MapPin size={16} className="text-[#9A96A3] shrink-0" />
                         <span className="font-medium text-[#9A96A3] w-20 shrink-0">Location</span>
                         <span className="font-semibold truncate">{pob || '—'}</span>
                     </div>
-                    <div className="flex items-center gap-2.5 text-[13px] text-[#2A2734]">
+                    <div className="flex items-center gap-2.5 text-[13px] text-[#2A2734] dark:text-brand-darkText">
                         <Briefcase size={16} className="text-[#9A96A3] shrink-0" />
                         <span className="font-medium text-[#9A96A3] w-20 shrink-0">Work</span>
                         <span className="font-semibold truncate">{occupation || '—'}</span>
@@ -500,9 +500,9 @@ export const AppMemberProfileSheet = ({
                 </div>
 
                 {notes ? (
-                    <div className="mb-5 rounded-2xl bg-[#F7F4F0] px-3.5 py-3">
+                    <div className="mb-5 rounded-2xl bg-[#F7F4F0] dark:bg-brand-darkBg px-3.5 py-3">
                         <p className="text-[11px] font-bold uppercase tracking-widest text-[#9A96A3] mb-1">About</p>
-                        <p className="text-[13px] font-medium text-[#2A2734] leading-relaxed">{notes}</p>
+                        <p className="text-[13px] font-medium text-[#2A2734] dark:text-brand-darkText leading-relaxed">{notes}</p>
                     </div>
                 ) : null}
 

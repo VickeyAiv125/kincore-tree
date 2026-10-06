@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { getTreeWebviewContext } from '../../utils/treeWebviewNav';
+import { useTheme } from '../../context/ThemeContext';
 import TreeNodeAddModal from '../../components/tree/TreeNodeAddModal';
 import {
     AppAddChildNode,
@@ -566,6 +567,7 @@ const FamilyTree = () => {
 
     /* ── App view flag ── */
     const isAppView = new URLSearchParams(window.location.search).get('view') === 'app' || window.location.pathname.includes('/webview/');
+    const { theme } = useTheme();
 
     const totalMembers = persons.length;
     const totalGenerations = treeStructure.generations.length;
@@ -720,7 +722,7 @@ const FamilyTree = () => {
 
     /* ── Render ── */
     return (
-        <div className={`flex ${isAppView ? 'h-screen w-screen m-0' : 'h-full -m-8'} relative overflow-hidden ${isAppView ? 'bg-[#F7F5F2]' : 'bg-[#F9FAFB]/50 dark:bg-brand-darkBg'} transition-colors`}>
+        <div className={`flex ${isAppView ? 'h-screen w-screen m-0' : 'h-full -m-8'} relative overflow-hidden ${isAppView ? 'bg-[#F7F5F2] dark:bg-[#12141C]' : 'bg-[#F9FAFB]/50 dark:bg-brand-darkBg'} transition-colors`}>
 
             {/* ── TREE AREA ── */}
             {/* Padding-right reserves space for the fixed right sidebar */}
@@ -735,7 +737,7 @@ const FamilyTree = () => {
 
                 {/* App chrome: header + tabs (mockup) */}
                 {isAppView && (
-                    <div className="fixed top-0 left-0 right-0 z-30 px-3 pt-3 pb-2 bg-gradient-to-b from-[#F7F5F2] via-[#F7F5F2]/96 to-transparent pointer-events-none">
+                    <div className="fixed top-0 left-0 right-0 z-30 px-3 pt-3 pb-2 bg-gradient-to-b from-[#F7F5F2] via-[#F7F5F2]/96 to-transparent dark:from-[#12141C] dark:via-[#12141C]/96 pointer-events-none">
                         <div className="pointer-events-auto max-w-lg mx-auto space-y-3">
                             <AppTreeHeader
                                 familyName={familyName || 'Family Tree'}
@@ -794,14 +796,14 @@ const FamilyTree = () => {
                         <>
                             <button
                                 onClick={() => handleZoom(0.1)}
-                                className="w-11 h-11 rounded-full bg-white text-[#1F1D2B] shadow-[0_6px_18px_rgba(26,28,46,0.12)] border border-[#EEEAE4] flex items-center justify-center active:scale-95"
+                                className="w-11 h-11 rounded-full bg-white dark:bg-brand-darkCard text-[#1F1D2B] dark:text-brand-darkText shadow-[0_6px_18px_rgba(26,28,46,0.12)] border border-[#EEEAE4] dark:border-brand-darkBorder flex items-center justify-center active:scale-95"
                                 title="Zoom In"
                             >
                                 <Plus size={20} strokeWidth={2.4} />
                             </button>
                             <button
                                 onClick={() => handleZoom(-0.1)}
-                                className="w-11 h-11 rounded-full bg-white text-[#1F1D2B] shadow-[0_6px_18px_rgba(26,28,46,0.12)] border border-[#EEEAE4] flex items-center justify-center active:scale-95"
+                                className="w-11 h-11 rounded-full bg-white dark:bg-brand-darkCard text-[#1F1D2B] dark:text-brand-darkText shadow-[0_6px_18px_rgba(26,28,46,0.12)] border border-[#EEEAE4] dark:border-brand-darkBorder flex items-center justify-center active:scale-95"
                                 title="Zoom Out"
                             >
                                 <Minus size={20} strokeWidth={2.4} />
@@ -874,7 +876,7 @@ const FamilyTree = () => {
                                             y1={isVertical && line.y1 < line.y2 ? line.y1 + 4 : line.y1}
                                             x2={line.x2}
                                             y2={isVertical && line.y2 > line.y1 ? line.y2 - 4 : line.y2}
-                                            stroke={isAppView ? 'rgba(160,160,170,0.85)' : 'rgba(251,146,60,0.6)'}
+                                            stroke={isAppView ? (theme === 'dark' ? 'rgba(255,255,255,0.28)' : 'rgba(160,160,170,0.85)') : 'rgba(251,146,60,0.6)'}
                                             strokeWidth={isAppView ? '1.75' : '2.5'}
                                             strokeLinecap="round"
                                         />
