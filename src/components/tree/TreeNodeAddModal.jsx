@@ -193,7 +193,7 @@ const GenderPicker = ({ addType, value, onChange }) => {
     const options = addType === 'parent' ? GENDER_OPTIONS.parent : GENDER_OPTIONS.default;
     return (
         <div>
-            <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2 ml-1">Gender</label>
+            <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2 ml-1">{addType === 'parent' ? 'Parent Type' : 'Gender'}</label>
             <div className="flex flex-wrap gap-2">
                 {options.map((opt) => (
                     <button
