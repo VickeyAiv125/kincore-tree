@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import {
     Bell,
     Briefcase,
@@ -385,7 +385,7 @@ export const AppTreeMemberSearch = ({
                 </button>
             </div>
             <div className="max-h-[280px] overflow-y-auto">
-                {query.trim().length < 1 ? (
+                {query.trim().length < 1 && results.length === 0 ? (
                     <p className="px-4 py-5 text-[12px] font-medium text-[#9A96A3] text-center">
                         Type a name to find someone in this tree
                     </p>
@@ -425,12 +425,49 @@ export const AppTreeMemberSearch = ({
     );
 };
 
+const toDateInput = (value) => {
+    const raw = String(value || '').trim();
+    const match = raw.match(/^(\d{4})-(\d{2})-(\d{2})/);
+    return match ? `${match[1]}-${match[2]}-${match[3]}` : '';
+};
+
 /** Bottom sheet: check profile before adding relatives */
 export const AppMemberProfileSheet = ({
     member,
     onClose,
     onAddRelative,
+    onSave,
 }) => {
+    const [editing, setEditing] = useState(false);
+    const [saving, setSaving] = useState(false);
+    const [error, setError] = useState('');
+    const [draft, setDraft] = useState({
+        name: '',
+        dob: '',
+        gender: '',
+        pob: '',
+        occupation: '',
+        notes: '',
+    });
+
+    useEffect(() => {
+        if (!member) return;
+        const pob = member.pob || member.place_of_birth || '';
+        setDraft({
+            name: member.name || getPersonName(member),
+            dob: toDateInput(member.dob || member.birth_date || member.date_of_birth),
+            gender: member.gender || '',
+            pob: pob === 'Unknown' ? '' : pob,
+            occupation: member.occupation && member.occupation !== 'Family Member'
+                ? member.occupation
+                : (member.role && member.role !== 'Family Member' ? member.role : ''),
+            notes: member.notes || member.bio || member.bio_notes || '',
+        });
+        setEditing(false);
+        setError('');
+        setSaving(false);
+    }, [member]);
+
     if (!member) return null;
 
     const name = member.name || getPersonName(member);
@@ -439,6 +476,20 @@ export const AppMemberProfileSheet = ({
     const pob = member.pob || member.place_of_birth || '—';
     const occupation = member.occupation || member.role || '—';
     const notes = member.notes || member.bio || member.bio_notes || '';
+
+    const saveProfile = async () => {
+        if (!onSave) return;
+        setSaving(true);
+        setError('');
+        try {
+            await onSave(draft);
+            setEditing(false);
+        } catch (err) {
+            setError(err?.message || 'Could not save this profile');
+        } finally {
+            setSaving(false);
+        }
+    };
 
     return (
         <div className="fixed inset-0 z-[70] flex items-end justify-center">
@@ -499,21 +550,83 @@ export const AppMemberProfileSheet = ({
                     </div>
                 </div>
 
-                {notes ? (
+                {editing ? (
+                    <div className="space-y-3 mb-5">
+                        {[
+                            ['name', 'Full name', 'text'],
+                            ['dob', 'Date of birth', 'date'],
+                            ['pob', 'Place of birth', 'text'],
+                            ['occupation', 'Work', 'text'],
+                        ].map(([key, label, type]) => (
+                            <label key={key} className="block">
+                                <span className="text-[11px] font-bold uppercase tracking-widest text-[#9A96A3]">{label}</span>
+                                <input
+                                    type={type}
+                                    value={draft[key]}
+                                    onChange={(e) => setDraft((prev) => ({ ...prev, [key]: e.target.value }))}
+                                    className="mt-1 w-full h-11 rounded-2xl bg-[#F7F4F0] dark:bg-brand-darkBg border border-[#EEEAE4] dark:border-brand-darkBorder px-3 text-[14px] font-semibold text-[#1F1D2B] dark:text-brand-darkText outline-none"
+                                />
+                            </label>
+                        ))}
+                        <label className="block">
+                            <span className="text-[11px] font-bold uppercase tracking-widest text-[#9A96A3]">Gender</span>
+                            <select
+                                value={draft.gender}
+                                onChange={(e) => setDraft((prev) => ({ ...prev, gender: e.target.value }))}
+                                className="mt-1 w-full h-11 rounded-2xl bg-[#F7F4F0] dark:bg-brand-darkBg border border-[#EEEAE4] dark:border-brand-darkBorder px-3 text-[14px] font-semibold text-[#1F1D2B] dark:text-brand-darkText outline-none"
+                            >
+                                <option value="">Not set</option>
+                                <option value="Male">Male</option>
+                                <option value="Female">Female</option>
+                                <option value="Other">Other</option>
+                            </select>
+                        </label>
+                        <label className="block">
+                            <span className="text-[11px] font-bold uppercase tracking-widest text-[#9A96A3]">About</span>
+                            <textarea
+                                rows={3}
+                                value={draft.notes}
+                                onChange={(e) => setDraft((prev) => ({ ...prev, notes: e.target.value }))}
+                                className="mt-1 w-full rounded-2xl bg-[#F7F4F0] dark:bg-brand-darkBg border border-[#EEEAE4] dark:border-brand-darkBorder px-3 py-2 text-[14px] font-semibold text-[#1F1D2B] dark:text-brand-darkText outline-none resize-none"
+                            />
+                        </label>
+                        {error ? <p className="text-[12px] font-semibold text-red-500">{error}</p> : null}
+                    </div>
+                ) : notes ? (
                     <div className="mb-5 rounded-2xl bg-[#F7F4F0] dark:bg-brand-darkBg px-3.5 py-3">
                         <p className="text-[11px] font-bold uppercase tracking-widest text-[#9A96A3] mb-1">About</p>
                         <p className="text-[13px] font-medium text-[#2A2734] dark:text-brand-darkText leading-relaxed">{notes}</p>
                     </div>
                 ) : null}
 
+                {editing ? (
+                    <button
+                        type="button"
+                        onClick={saveProfile}
+                        disabled={saving || !draft.name.trim()}
+                        className="w-full h-[52px] rounded-full bg-[#FF6A2B] text-white font-bold text-[15px] border-0 disabled:opacity-60"
+                    >
+                        {saving ? 'Saving...' : 'Save profile'}
+                    </button>
+                ) : (
+                    <button
+                        type="button"
+                        onClick={() => setEditing(true)}
+                        className="w-full h-[52px] rounded-full bg-[#FF6A2B] text-white font-bold text-[15px] border-0"
+                    >
+                        View profile
+                    </button>
+                )}
+                {!editing && (
                 <button
                     type="button"
                     onClick={() => onAddRelative?.(member)}
-                    className="w-full h-[52px] rounded-full bg-[#FF6A2B] text-white font-bold text-[15px] border-0 flex items-center justify-center gap-2 shadow-[0_10px_24px_rgba(255,106,43,0.35)]"
+                    className="w-full mt-2 h-11 rounded-full bg-[#FFF1EA] dark:bg-brand-darkBg text-[#FF6A2B] font-bold text-[14px] border-0 flex items-center justify-center gap-2"
                 >
                     <UserRoundPlus size={18} strokeWidth={2.3} />
                     Add relative to this person
                 </button>
+                )}
                 <button
                     type="button"
                     onClick={onClose}

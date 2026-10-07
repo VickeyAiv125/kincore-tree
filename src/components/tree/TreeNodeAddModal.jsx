@@ -30,16 +30,27 @@ const ADD_CONFIG = {
 };
 
 const GENDER_OPTIONS = {
-    parent: [
-        { value: 'Male', label: 'Father' },
-        { value: 'Female', label: 'Mother' },
-    ],
     default: [
         { value: 'Male', label: 'Male' },
         { value: 'Female', label: 'Female' },
         { value: 'Other', label: 'Other' },
     ],
 };
+
+const PARENT_ROLE_OPTIONS = [
+    { value: 'father', label: 'Father', gender: 'Male' },
+    { value: 'mother', label: 'Mother', gender: 'Female' },
+    { value: 'parent', label: 'Parent', gender: 'Other' },
+];
+
+const PARENT_RELATIONSHIP_OPTIONS = [
+    { value: 'biological', label: 'Biological' },
+    { value: 'adoptive', label: 'Adoptive' },
+    { value: 'step-parent', label: 'Step-parent' },
+    { value: 'foster', label: 'Foster' },
+    { value: 'guardian', label: 'Guardian' },
+    { value: 'unknown', label: 'Unknown' },
+];
 
 const VISIBILITY_OPTIONS = [
     { value: 'public', label: 'Public' },
@@ -51,6 +62,8 @@ const emptyForm = (addType) => ({
     last_name: '',
     email: '',
     gender: ADD_CONFIG[addType]?.defaultGender || 'Other',
+    parent_role: 'father',
+    relationship_to_child: 'biological',
     is_alive: true,
     date_of_birth: '',
     place_of_birth: '',
@@ -76,19 +89,24 @@ const validateEmail = (email) => {
     return null;
 };
 
-/** Parse YYYY-MM-DD or MM/DD/YYYY / DD/MM/YYYY-ish into Date at UTC noon, or null. */
+/** Parse YYYY-MM-DD, ISO timestamps, year-only, or MM/DD/YYYY into Date at UTC noon. */
 const parseDob = (raw) => {
-    if (!raw || typeof raw !== 'string') return null;
-    const s = raw.trim();
+    if (raw instanceof Date) return Number.isNaN(raw.getTime()) ? null : raw;
+    if (raw == null) return null;
+    const s = String(raw).trim();
     if (!s || s.toLowerCase() === 'unknown' || s.toLowerCase() === 'null') return null;
-    const iso = s.match(/^(\d{4})-(\d{1,2})-(\d{1,2})$/);
+    const iso = s.match(/^(\d{4})-(\d{1,2})-(\d{1,2})/);
     if (iso) {
         const d = new Date(Date.UTC(+iso[1], +iso[2] - 1, +iso[3], 12));
         return Number.isNaN(d.getTime()) ? null : d;
     }
+    const yearOnly = s.match(/^(\d{4})$/);
+    if (yearOnly) {
+        const d = new Date(Date.UTC(+yearOnly[1], 0, 1, 12));
+        return Number.isNaN(d.getTime()) ? null : d;
+    }
     const slash = s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
     if (slash) {
-        // Prefer MM/DD/YYYY (HTML date picker display / US forms in this modal)
         const d = new Date(Date.UTC(+slash[3], +slash[1] - 1, +slash[2], 12));
         return Number.isNaN(d.getTime()) ? null : d;
     }
@@ -104,17 +122,25 @@ const getPersonDob = (person) =>
  * Child must be born after the target (parent/self).
  */
 const validateRelationDob = (addType, formDobRaw, targetPerson) => {
+    if (addType !== 'parent' && addType !== 'child') return null;
+
     const formDob = parseDob(formDobRaw);
-    if (!formDob) return null; // optional field — skip if empty
     const targetDob = getPersonDob(targetPerson);
-    if (!targetDob) return null; // no baseline to compare
+    const today = new Date();
+    const endOfToday = Date.UTC(today.getUTCFullYear(), today.getUTCMonth(), today.getUTCDate(), 23, 59, 59);
 
     if (addType === 'parent') {
+        if (!formDob) return 'Parent date of birth is required.';
+        if (formDob.getTime() > endOfToday) return 'Date of birth cannot be in the future.';
+        if (!targetDob) return 'This person’s date of birth is missing. Add it before adding a parent.';
         if (formDob.getTime() >= targetDob.getTime()) {
             return 'Parent date of birth must be earlier than this person’s date of birth.';
         }
     }
     if (addType === 'child') {
+        if (!formDob) return 'Child date of birth is required.';
+        if (formDob.getTime() > endOfToday) return 'Date of birth cannot be in the future.';
+        if (!targetDob) return 'This person’s date of birth is missing. Add it before adding a child.';
         if (formDob.getTime() <= targetDob.getTime()) {
             return 'Child date of birth must be later than this person’s date of birth.';
         }
@@ -189,11 +215,11 @@ const ToggleField = ({ label, description, name, checked, onChange }) => (
     </label>
 );
 
-const GenderPicker = ({ addType, value, onChange }) => {
-    const options = addType === 'parent' ? GENDER_OPTIONS.parent : GENDER_OPTIONS.default;
+const GenderPicker = ({ value, onChange }) => {
+    const options = GENDER_OPTIONS.default;
     return (
         <div>
-            <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2 ml-1">{addType === 'parent' ? 'Parent Type' : 'Gender'}</label>
+            <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2 ml-1">Gender</label>
             <div className="flex flex-wrap gap-2">
                 {options.map((opt) => (
                     <button
@@ -277,6 +303,10 @@ const buildSubmitBody = (addType, form, familySpaceId, personId, avatarUrl) => {
     appendIfPresent(body, 'avatar_url', avatarUrl);
 
     if (addType === 'parent') {
+        const role = PARENT_ROLE_OPTIONS.find((opt) => opt.value === form.parent_role) || PARENT_ROLE_OPTIONS[0];
+        body.gender = role.gender;
+        body.parent_role = role.value;
+        body.relationship_to_child = form.relationship_to_child || 'biological';
         appendIfPresent(body, 'date_of_birth', form.date_of_birth);
         appendIfPresent(body, 'place_of_birth', form.place_of_birth);
         appendIfPresent(body, 'anniversary_date', form.anniversary_date);
@@ -499,7 +529,7 @@ const TreeNodeAddModal = ({
                                     key={type}
                                     type="button"
                                     onClick={() => onSelectType(type)}
-                                    className="flex items-center gap-4 p-4 rounded-2xl bg-[#FFF0EB] border border-[#FFD5C7] text-left hover:bg-[#FFE4DB] hover:scale-[1.01] active:scale-[0.99] transition-all"
+                                    className="flex items-center gap-4 p-4 rounded-2xl bg-[#FFF0EB] dark:bg-[#2C2420] border border-[#FFD5C7] dark:border-[#5C4036] text-left hover:bg-[#FFE4DB] dark:hover:bg-[#3A2E28] hover:scale-[1.01] active:scale-[0.99] transition-all"
                                 >
                                     <div className="w-10 h-10 rounded-xl bg-[#FF622E] text-white flex items-center justify-center shadow-sm shadow-[#FF622E]/25">
                                         <Icon size={18} />
@@ -537,11 +567,29 @@ const TreeNodeAddModal = ({
                                 required
                             />
 
-                            <GenderPicker
-                                addType={addType}
-                                value={form.gender}
-                                onChange={(gender) => setForm((p) => ({ ...p, gender }))}
-                            />
+                            {addType === 'parent' ? (
+                                <>
+                                    <SelectField
+                                        label="Parent role"
+                                        name="parent_role"
+                                        value={form.parent_role}
+                                        onChange={handleChange}
+                                        options={PARENT_ROLE_OPTIONS}
+                                    />
+                                    <SelectField
+                                        label="Relationship to this child"
+                                        name="relationship_to_child"
+                                        value={form.relationship_to_child}
+                                        onChange={handleChange}
+                                        options={PARENT_RELATIONSHIP_OPTIONS}
+                                    />
+                                </>
+                            ) : (
+                                <GenderPicker
+                                    value={form.gender}
+                                    onChange={(gender) => setForm((p) => ({ ...p, gender }))}
+                                />
+                            )}
 
                             <ToggleField
                                 label="Person is alive"
@@ -555,16 +603,16 @@ const TreeNodeAddModal = ({
                                 <>
                                     <div className="grid grid-cols-2 gap-3">
                                         <Field
-                                            label="Date of birth"
+                                            label="Date of birth *"
                                             name="date_of_birth"
                                             type="date"
                                             value={form.date_of_birth}
                                             onChange={handleChange}
+                                            required
                                             max={(() => {
                                                 const d = getPersonDob(person);
-                                                if (!d) return undefined;
-                                                const prev = new Date(d.getTime() - 86400000);
-                                                return prev.toISOString().slice(0, 10);
+                                                const cap = d ? new Date(d.getTime() - 86400000) : new Date();
+                                                return cap.toISOString().slice(0, 10);
                                             })()}
                                         />
                                         <Field label="Anniversary date" name="anniversary_date" type="date" value={form.anniversary_date} onChange={handleChange} />
@@ -589,11 +637,13 @@ const TreeNodeAddModal = ({
                             {addType === 'child' && (
                                 <>
                                     <Field
-                                        label="Date of birth"
+                                        label="Date of birth *"
                                         name="date_of_birth"
                                         type="date"
                                         value={form.date_of_birth}
                                         onChange={handleChange}
+                                        required
+                                        max={new Date().toISOString().slice(0, 10)}
                                         min={(() => {
                                             const d = getPersonDob(person);
                                             if (!d) return undefined;
