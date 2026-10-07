@@ -16,7 +16,7 @@ import {
     isYou,
 } from '../../components/tree/AppTreeNodes';
 import {
-    Plus, Minus, Baby, Shield, Lock, UserCheck, MapPin, FileText,
+    Plus, Minus, Baby, Shield, Lock, UserCheck, MapPin, FileText, Palette,
     Skull, Calendar, RefreshCw, Undo2, Save, Info, UserPlus, Search, GitMerge, Heart, ChevronUp,
     CheckCircle2, AlertTriangle, UserRoundPlus
 } from 'lucide-react';
@@ -64,13 +64,33 @@ const buildTree = (persons, relationships) => {
     const parentsOf = {};    // childId  → [parentId]
     const spouseOf = {};     // personId → [spouseId]
 
+    const parentLinkLabels = {};
+    const linkLabel = (type) => {
+        const parts = String(type || '').toLowerCase().split(':');
+        if (parts[0] !== 'parent') return '';
+        const linkNames = {
+            biological: 'Biological',
+            adoptive: 'Adoptive',
+            'step-parent': 'Step-parent',
+            foster: 'Foster',
+            guardian: 'Guardian',
+            unknown: 'Unknown',
+        };
+        const roleNames = { father: 'Father', mother: 'Mother', parent: 'Parent' };
+        const link = linkNames[parts[1]] || '';
+        const role = roleNames[parts[2]] || '';
+        return [link, role].filter(Boolean).join(' ');
+    };
+
     (relationships || []).forEach(rel => {
-        const type = rel.relationship_type || rel.relation_type;
-        if (type === 'parent') {
+        const type = String(rel.relationship_type || rel.relation_type || '').toLowerCase();
+        if (type === 'parent' || type.startsWith('parent:')) {
             if (!childrenOf[rel.person_id]) childrenOf[rel.person_id] = [];
             childrenOf[rel.person_id].push(rel.related_person_id);
             if (!parentsOf[rel.related_person_id]) parentsOf[rel.related_person_id] = [];
             parentsOf[rel.related_person_id].push(rel.person_id);
+            const label = linkLabel(type);
+            if (label) parentLinkLabels[`${rel.person_id}:${rel.related_person_id}`] = label;
         } else if (type === 'spouse') {
             if (!spouseOf[rel.person_id]) spouseOf[rel.person_id] = [];
             spouseOf[rel.person_id].push(rel.related_person_id);
@@ -158,10 +178,19 @@ const buildTree = (persons, relationships) => {
         else generations[0] = [...generations[0], ...orphans];
     }
 
-    return { generations, childrenOf, parentsOf, spouseOf, personMap };
+    return { generations, childrenOf, parentsOf, spouseOf, personMap, parentLinkLabels };
 };
 
 /* Ordinal helper: 1 → "1ST", 2 → "2ND" etc. */
+const TREE_BACKGROUNDS = [
+    { id: 'cream', label: 'Cream', color: '#F7F5F2' },
+    { id: 'white', label: 'White', color: '#FFFFFF' },
+    { id: 'sand', label: 'Sand', color: '#E8D5C4' },
+    { id: 'sage', label: 'Sage', color: '#D5E2D6' },
+    { id: 'night', label: 'Night', color: '#12141C' },
+    { id: 'ink', label: 'Ink', color: '#1B2430' },
+];
+
 const ordinal = (n) => {
     const s = ['TH', 'ST', 'ND', 'RD'];
     const v = n % 100;
@@ -305,7 +334,13 @@ const FamilyTree = () => {
     const [treeStructure, setTreeStructure] = useState({ generations: [], childrenOf: {}, parentsOf: {}, spouseOf: {}, personMap: new Map() });
     const [selectedMember, setSelectedMember] = useState(null);
     const [loading, setLoading] = useState(true);
-    const [memberSearchOpen, setMemberSearchOpen] = useState(false);
+    const [treeBgId, setTreeBgId] = useState(() => localStorage.getItem('kincore_tree_bg') || '');
+    const [bgPickerOpen, setBgPickerOpen] = useState(false);
+    const [memberSearchOpen, setMemberSearchOpen] = useState(() => {
+        if (typeof window === 'undefined') return false;
+        const params = new URLSearchParams(window.location.search);
+        return params.get('view') === 'app' || window.location.pathname.includes('/webview/');
+    });
     const [memberSearchQuery, setMemberSearchQuery] = useState('');
     const [appProfileMember, setAppProfileMember] = useState(null);
 
@@ -531,13 +566,18 @@ const FamilyTree = () => {
                     parentAttachY = (pRect.bottom - wRect.top) / z;
                 }
 
+                const parentIds = [person.id, spouseId].filter(Boolean);
                 const childCenters = childIds.map(cid => {
                     const el = nodeRefs.current[cid];
                     if (!el) return null;
                     const r = el.getBoundingClientRect();
+                    const labels = parentIds
+                        .map((pid) => treeStructure.parentLinkLabels?.[`${pid}:${cid}`])
+                        .filter(Boolean);
                     return {
                         cx: ((r.left + r.right) / 2 - wRect.left) / z,
-                        top: (r.top - wRect.top) / z
+                        top: (r.top - wRect.top) / z,
+                        label: labels.join(' · ')
                     };
                 }).filter(Boolean);
 
@@ -558,7 +598,7 @@ const FamilyTree = () => {
                 }
 
                 childCenters.forEach(c => {
-                    lines.push({ x1: c.cx, y1: midY, x2: c.cx, y2: c.top });
+                    lines.push({ x1: c.cx, y1: midY, x2: c.cx, y2: c.top, label: c.label });
                 });
             });
         });
@@ -568,6 +608,14 @@ const FamilyTree = () => {
     /* ── App view flag ── */
     const isAppView = new URLSearchParams(window.location.search).get('view') === 'app' || window.location.pathname.includes('/webview/');
     const { theme } = useTheme();
+    const selectedTreeBg = TREE_BACKGROUNDS.find((bg) => bg.id === treeBgId);
+    const canvasColor = selectedTreeBg?.color || (theme === 'dark' ? '#12141C' : (isAppView ? '#F7F5F2' : '#F9FAFB'));
+
+    const chooseTreeBackground = (id) => {
+        setTreeBgId(id);
+        localStorage.setItem('kincore_tree_bg', id);
+        setBgPickerOpen(false);
+    };
 
     const totalMembers = persons.length;
     const totalGenerations = treeStructure.generations.length;
@@ -672,14 +720,41 @@ const FamilyTree = () => {
 
     const memberSearchResults = useMemo(() => {
         const q = memberSearchQuery.trim().toLowerCase();
-        if (!q) return [];
-        return persons.filter((p) => {
+        const matched = persons.filter((p) => {
+            if (!q) return true;
             const name = getPersonName(p).toLowerCase();
             const first = String(p.first_name || '').toLowerCase();
             const last = String(p.last_name || '').toLowerCase();
             return name.includes(q) || first.includes(q) || last.includes(q);
-        }).slice(0, 20);
+        });
+        return matched.slice(0, q ? 20 : 8);
     }, [persons, memberSearchQuery]);
+
+    const saveAppProfile = async (fields) => {
+        const personId = appProfileMember?.id;
+        if (!personId) throw new Error('This person could not be saved');
+        const parts = String(fields.name || '').trim().split(/\s+/).filter(Boolean);
+        const res = await fetch(`${API}/clantree/person/${personId}`, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token()}` },
+            body: JSON.stringify({
+                full_name: fields.name.trim(),
+                first_name: parts[0] || '',
+                last_name: parts.slice(1).join(' '),
+                gender: fields.gender || null,
+                date_of_birth: fields.dob || null,
+                place_of_birth: fields.pob || null,
+                occupation: fields.occupation || null,
+                bio_notes: fields.notes || null,
+            }),
+        });
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) throw new Error(data.error || data.message || 'Could not save this profile');
+        const next = { ...(persons.find((p) => p.id === personId) || {}), ...data };
+        setPersons((prev) => prev.map((p) => (p.id === personId ? next : p)));
+        setAppProfileMember(mapToMember(next));
+        setSelectedMember(mapToMember(next));
+    };
 
     const handleSave = async () => {
         if (!selectedMember?.id) return;
@@ -722,7 +797,10 @@ const FamilyTree = () => {
 
     /* ── Render ── */
     return (
-        <div className={`flex ${isAppView ? 'h-screen w-screen m-0' : 'h-full -m-8'} relative overflow-hidden ${isAppView ? 'bg-[#F7F5F2] dark:bg-[#12141C]' : 'bg-[#F9FAFB]/50 dark:bg-brand-darkBg'} transition-colors`}>
+        <div
+            className={`flex ${isAppView ? 'h-screen w-screen m-0' : 'h-full -m-8'} relative overflow-hidden transition-colors`}
+            style={{ backgroundColor: canvasColor }}
+        >
 
             {/* ── TREE AREA ── */}
             {/* Padding-right reserves space for the fixed right sidebar */}
@@ -737,7 +815,10 @@ const FamilyTree = () => {
 
                 {/* App chrome: header + tabs (mockup) */}
                 {isAppView && (
-                    <div className="fixed top-0 left-0 right-0 z-30 px-3 pt-3 pb-2 bg-gradient-to-b from-[#F7F5F2] via-[#F7F5F2]/96 to-transparent dark:from-[#12141C] dark:via-[#12141C]/96 pointer-events-none">
+                    <div
+                        className="fixed top-0 left-0 right-0 z-30 px-3 pt-3 pb-2 pointer-events-none"
+                        style={{ background: `linear-gradient(to bottom, ${canvasColor}, ${canvasColor}f5, transparent)` }}
+                    >
                         <div className="pointer-events-auto max-w-lg mx-auto space-y-3">
                             <AppTreeHeader
                                 familyName={familyName || 'Family Tree'}
@@ -792,6 +873,35 @@ const FamilyTree = () => {
                         ? 'left-4 bottom-7 gap-2.5'
                         : 'top-4 right-[368px] space-y-1'
                 }`}>
+                    <div className="relative">
+                        <button
+                            type="button"
+                            onClick={() => setBgPickerOpen((open) => !open)}
+                            className={`${isAppView
+                                ? 'w-11 h-11 rounded-full bg-white dark:bg-brand-darkCard text-[#1F1D2B] dark:text-brand-darkText shadow-[0_6px_18px_rgba(26,28,46,0.12)] border border-[#EEEAE4] dark:border-brand-darkBorder'
+                                : 'p-2.5 rounded-xl bg-white/95 dark:bg-brand-darkCard/80 border border-gray-100 dark:border-brand-darkBorder text-gray-500'
+                            } flex items-center justify-center active:scale-95`}
+                            title="Tree background"
+                            aria-label="Choose tree background"
+                        >
+                            <Palette size={isAppView ? 18 : 16} strokeWidth={2.2} />
+                        </button>
+                        {bgPickerOpen && (
+                            <div className={`absolute ${isAppView ? 'left-14 bottom-0' : 'right-12 top-0'} z-40 flex gap-2 p-2 rounded-2xl bg-white dark:bg-brand-darkCard border border-[#EEEAE4] dark:border-brand-darkBorder shadow-xl`}>
+                                {TREE_BACKGROUNDS.map((bg) => (
+                                    <button
+                                        key={bg.id}
+                                        type="button"
+                                        title={bg.label}
+                                        aria-label={bg.label}
+                                        onClick={() => chooseTreeBackground(bg.id)}
+                                        className={`w-7 h-7 rounded-full border-2 ${treeBgId === bg.id ? 'border-[#FF6A2B]' : 'border-white/80'}`}
+                                        style={{ backgroundColor: bg.color }}
+                                    />
+                                ))}
+                            </div>
+                        )}
+                    </div>
                     {isAppView ? (
                         <>
                             <button
@@ -868,18 +978,34 @@ const FamilyTree = () => {
                             >
                                 {svgLines.map((line, i) => {
                                     const isVertical = line.x1 === line.x2;
-                                    const isHorizontal = line.y1 === line.y2;
+                                    const y1 = isVertical && line.y1 < line.y2 ? line.y1 + 4 : line.y1;
+                                    const y2 = isVertical && line.y2 > line.y1 ? line.y2 - 4 : line.y2;
+                                    const midX = (line.x1 + line.x2) / 2;
+                                    const midY = (y1 + y2) / 2;
                                     return (
-                                        <line
-                                            key={i}
-                                            x1={line.x1}
-                                            y1={isVertical && line.y1 < line.y2 ? line.y1 + 4 : line.y1}
-                                            x2={line.x2}
-                                            y2={isVertical && line.y2 > line.y1 ? line.y2 - 4 : line.y2}
-                                            stroke={isAppView ? (theme === 'dark' ? 'rgba(255,255,255,0.28)' : 'rgba(160,160,170,0.85)') : 'rgba(251,146,60,0.6)'}
-                                            strokeWidth={isAppView ? '1.75' : '2.5'}
-                                            strokeLinecap="round"
-                                        />
+                                        <g key={i}>
+                                            <line
+                                                x1={line.x1}
+                                                y1={y1}
+                                                x2={line.x2}
+                                                y2={y2}
+                                                stroke={isAppView ? (theme === 'dark' ? 'rgba(255,255,255,0.28)' : 'rgba(160,160,170,0.85)') : 'rgba(251,146,60,0.6)'}
+                                                strokeWidth={isAppView ? '1.75' : '2.5'}
+                                                strokeLinecap="round"
+                                            />
+                                            {line.label && (
+                                                <text
+                                                    x={midX}
+                                                    y={midY - 6}
+                                                    textAnchor="middle"
+                                                    fontSize="10"
+                                                    fontWeight="700"
+                                                    fill={theme === 'dark' ? '#E5E5E5' : '#6F6A78'}
+                                                >
+                                                    {line.label}
+                                                </text>
+                                            )}
+                                        </g>
                                     );
                                 })}
                             </svg>
@@ -994,6 +1120,7 @@ const FamilyTree = () => {
                 <AppMemberProfileSheet
                     member={appProfileMember}
                     onClose={() => setAppProfileMember(null)}
+                    onSave={saveAppProfile}
                     onAddRelative={(member) => {
                         setAppProfileMember(null);
                         openAddModal(member);
