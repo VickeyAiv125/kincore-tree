@@ -313,7 +313,7 @@ const Login = () => {
                                     required
                                     autoFocus
                                     className="w-full px-4 py-3.5 rounded-2xl bg-gray-50 dark:bg-brand-darkBg border-none text-sm font-medium outline-none focus:ring-2 focus:ring-brand-orange/20"
-                                    placeholder="you@example.com"
+                                    placeholder="you@example.com or handler"
                                 />
                             </div>
                             <div>
