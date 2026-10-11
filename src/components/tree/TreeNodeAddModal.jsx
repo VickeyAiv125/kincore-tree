@@ -117,6 +117,21 @@ const parseDob = (raw) => {
 const getPersonDob = (person) =>
     parseDob(person?.birth_date || person?.date_of_birth || person?.dob || '');
 
+const toIsoDate = (date) => {
+    const y = date.getUTCFullYear();
+    const m = String(date.getUTCMonth() + 1).padStart(2, '0');
+    const d = String(date.getUTCDate()).padStart(2, '0');
+    return `${y}-${m}-${d}`;
+};
+
+const todayIsoDate = () => {
+    const now = new Date();
+    const y = now.getFullYear();
+    const m = String(now.getMonth() + 1).padStart(2, '0');
+    const d = String(now.getDate()).padStart(2, '0');
+    return `${y}-${m}-${d}`;
+};
+
 /**
  * Parent must be born before the target (child/self).
  * Child must be born after the target (parent/self).
@@ -126,26 +141,40 @@ const validateRelationDob = (addType, formDobRaw, targetPerson) => {
 
     const formDob = parseDob(formDobRaw);
     const targetDob = getPersonDob(targetPerson);
+    const name = getPersonName(targetPerson);
     const today = new Date();
     const endOfToday = Date.UTC(today.getUTCFullYear(), today.getUTCMonth(), today.getUTCDate(), 23, 59, 59);
 
+    if (!targetDob) {
+        return addType === 'parent'
+            ? `${name} has no date of birth. Add it before adding a parent. A parent must be born before ${name}.`
+            : `${name} has no date of birth. Add it before adding a child. A child must be born after ${name}.`;
+    }
     if (addType === 'parent') {
         if (!formDob) return 'Parent date of birth is required.';
         if (formDob.getTime() > endOfToday) return 'Date of birth cannot be in the future.';
-        if (!targetDob) return 'This person’s date of birth is missing. Add it before adding a parent.';
         if (formDob.getTime() >= targetDob.getTime()) {
-            return 'Parent date of birth must be earlier than this person’s date of birth.';
+            return `Parent date of birth must be earlier than ${name}'s date of birth.`;
         }
     }
     if (addType === 'child') {
         if (!formDob) return 'Child date of birth is required.';
         if (formDob.getTime() > endOfToday) return 'Date of birth cannot be in the future.';
-        if (!targetDob) return 'This person’s date of birth is missing. Add it before adding a child.';
         if (formDob.getTime() <= targetDob.getTime()) {
-            return 'Child date of birth must be later than this person’s date of birth.';
+            return `Child date of birth must be later than ${name}'s date of birth.`;
         }
     }
     return null;
+};
+
+/** Shown as soon as the form is open, including before a date is typed. */
+const relationDobBlock = (addType, formDobRaw, targetPerson) => {
+    if (addType !== 'parent' && addType !== 'child') return '';
+    if (!getPersonDob(targetPerson)) {
+        return validateRelationDob(addType, formDobRaw, targetPerson) || '';
+    }
+    if (!formDobRaw) return '';
+    return validateRelationDob(addType, formDobRaw, targetPerson) || '';
 };
 
 const uploadPersonPhoto = async (file, familySpaceId) => {
@@ -164,7 +193,7 @@ const uploadPersonPhoto = async (file, familySpaceId) => {
     return data.media?.url || data.url || '';
 };
 
-const Field = ({ label, name, type = 'text', value, onChange, placeholder, required, min, max }) => (
+const Field = ({ label, name, type = 'text', value, onChange, placeholder, required, min, max, disabled }) => (
     <div className="space-y-1.5">
         <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">{label}</label>
         <input
@@ -176,7 +205,8 @@ const Field = ({ label, name, type = 'text', value, onChange, placeholder, requi
             required={required}
             min={min}
             max={max}
-            className="w-full bg-gray-50 dark:bg-brand-darkBg/50 border border-gray-100 dark:border-brand-darkBorder rounded-2xl py-3.5 px-4 text-sm font-semibold text-gray-800 dark:text-brand-darkText outline-none focus:ring-4 focus:ring-brand-orange/10"
+            disabled={disabled}
+            className="w-full bg-gray-50 dark:bg-brand-darkBg/50 border border-gray-100 dark:border-brand-darkBorder rounded-2xl py-3.5 px-4 text-sm font-semibold text-gray-800 dark:text-brand-darkText outline-none focus:ring-4 focus:ring-brand-orange/10 disabled:opacity-60"
         />
     </div>
 );
@@ -378,6 +408,11 @@ const TreeNodeAddModal = ({
     }, [avatarPreview]);
 
     if (!open || !person) return null;
+
+    const dobBlock = relationDobBlock(addType, form.date_of_birth, person);
+    const targetDob = getPersonDob(person);
+    const parentDobMax = targetDob ? toIsoDate(new Date(targetDob.getTime() - 86400000)) : undefined;
+    const childDobMin = targetDob ? toIsoDate(new Date(targetDob.getTime() + 86400000)) : undefined;
 
     const personName = getPersonName(person);
     const config = addType ? ADD_CONFIG[addType] : null;
@@ -609,11 +644,8 @@ const TreeNodeAddModal = ({
                                             value={form.date_of_birth}
                                             onChange={handleChange}
                                             required
-                                            max={(() => {
-                                                const d = getPersonDob(person);
-                                                const cap = d ? new Date(d.getTime() - 86400000) : new Date();
-                                                return cap.toISOString().slice(0, 10);
-                                            })()}
+                                            max={parentDobMax}
+                                            disabled={!targetDob}
                                         />
                                         <Field label="Anniversary date" name="anniversary_date" type="date" value={form.anniversary_date} onChange={handleChange} />
                                     </div>
@@ -643,13 +675,9 @@ const TreeNodeAddModal = ({
                                         value={form.date_of_birth}
                                         onChange={handleChange}
                                         required
-                                        max={new Date().toISOString().slice(0, 10)}
-                                        min={(() => {
-                                            const d = getPersonDob(person);
-                                            if (!d) return undefined;
-                                            const next = new Date(d.getTime() + 86400000);
-                                            return next.toISOString().slice(0, 10);
-                                        })()}
+                                        max={todayIsoDate()}
+                                        min={childDobMin}
+                                        disabled={!targetDob}
                                     />
                                     <div className="grid grid-cols-2 gap-3">
                                         <Field label="Place of birth" name="place_of_birth" value={form.place_of_birth} onChange={handleChange} placeholder="City, country" />
@@ -703,22 +731,29 @@ const TreeNodeAddModal = ({
                 </div>
 
                 {step === 'form' && (
-                    <div className="px-6 py-4 border-t border-gray-100 dark:border-brand-darkBorder flex gap-3">
-                        <button
-                            type="button"
-                            onClick={onClose}
-                            className="flex-1 py-3.5 rounded-2xl font-bold text-gray-500 bg-gray-100 dark:bg-brand-darkBg text-sm uppercase tracking-wider"
-                        >
-                            Cancel
-                        </button>
-                        <button
-                            type="submit"
-                            form="tree-add-form"
-                            disabled={loading}
-                            className="flex-1 py-3.5 rounded-2xl font-bold text-white bg-brand-orange text-sm uppercase tracking-wider disabled:opacity-50"
-                        >
-                            {loading ? loadingLabel : 'Save'}
-                        </button>
+                    <div className="px-6 py-4 border-t border-gray-100 dark:border-brand-darkBorder space-y-3">
+                        {(dobBlock || error) && (
+                            <p className="text-sm font-semibold text-red-600 bg-red-50 dark:bg-red-500/10 rounded-xl px-4 py-3">
+                                {dobBlock || error}
+                            </p>
+                        )}
+                        <div className="flex gap-3">
+                            <button
+                                type="button"
+                                onClick={onClose}
+                                className="flex-1 py-3.5 rounded-2xl font-bold text-gray-500 bg-gray-100 dark:bg-brand-darkBg text-sm uppercase tracking-wider"
+                            >
+                                Cancel
+                            </button>
+                            <button
+                                type="submit"
+                                form="tree-add-form"
+                                disabled={loading || Boolean(dobBlock)}
+                                className="flex-1 py-3.5 rounded-2xl font-bold text-white bg-brand-orange text-sm uppercase tracking-wider disabled:opacity-50"
+                            >
+                                {loading ? loadingLabel : 'Save'}
+                            </button>
+                        </div>
                     </div>
                 )}
             </div>
