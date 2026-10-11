@@ -336,11 +336,7 @@ const FamilyTree = () => {
     const [loading, setLoading] = useState(true);
     const [treeBgId, setTreeBgId] = useState(() => localStorage.getItem('kincore_tree_bg') || '');
     const [bgPickerOpen, setBgPickerOpen] = useState(false);
-    const [memberSearchOpen, setMemberSearchOpen] = useState(() => {
-        if (typeof window === 'undefined') return false;
-        const params = new URLSearchParams(window.location.search);
-        return params.get('view') === 'app' || window.location.pathname.includes('/webview/');
-    });
+    const [memberSearchOpen, setMemberSearchOpen] = useState(false);
     const [memberSearchQuery, setMemberSearchQuery] = useState('');
     const [appProfileMember, setAppProfileMember] = useState(null);
 
@@ -714,7 +710,6 @@ const FamilyTree = () => {
         setSelectedMember(mapped);
         if (isAppView) {
             setAppProfileMember(mapped);
-            setMemberSearchOpen(false);
         }
     };
 
