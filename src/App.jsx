@@ -3,6 +3,7 @@ import { BrowserRouter as Router, Routes, Route, Navigate, useNavigate, useLocat
 import { supabase } from './lib/supabase';
 import Login from './pages/Login';
 import ForgotPassword from './pages/ForgotPassword';
+import ResetPassword from './pages/ResetPassword';
 import AuthCallback from './pages/AuthCallback';
 import AcceptInvite from './pages/AcceptInvite';
 import { EventProvider } from './context/EventContext';
@@ -104,6 +105,7 @@ function App() {
         <Route path="/" element={<Login />} />
         <Route path="/auth/callback" element={<AuthCallback />} />
         <Route path="/forgot-password" element={<ForgotPassword />} />
+        <Route path="/reset-password" element={<ResetPassword />} />
         <Route path="/accept-invite" element={<AcceptInvite />} />
 
         {/* Family Hub Routes */}
