@@ -16,7 +16,8 @@ import {
     isYou,
 } from '../../components/tree/AppTreeNodes';
 import {
-    Plus, Minus, Baby, Shield, Lock, UserCheck, MapPin, FileText, Palette,
+    Plus, Minus, Baby, Shield, Lock, UserCheck, MapPin, FileText,
+    // Palette, // tree background picker — commented out, restore with TREE_BACKGROUNDS
     Skull, Calendar, RefreshCw, Undo2, Save, Info, UserPlus, Search, GitMerge, Heart, ChevronUp,
     CheckCircle2, AlertTriangle, UserRoundPlus
 } from 'lucide-react';
@@ -182,6 +183,7 @@ const buildTree = (persons, relationships) => {
 };
 
 /* Ordinal helper: 1 → "1ST", 2 → "2ND" etc. */
+/* Tree background picker — not in use. Restore with the palette button below.
 const TREE_BACKGROUNDS = [
     { id: 'cream', label: 'Cream', color: '#F7F5F2' },
     { id: 'white', label: 'White', color: '#FFFFFF' },
@@ -190,6 +192,7 @@ const TREE_BACKGROUNDS = [
     { id: 'night', label: 'Night', color: '#12141C' },
     { id: 'ink', label: 'Ink', color: '#1B2430' },
 ];
+*/
 
 const ordinal = (n) => {
     const s = ['TH', 'ST', 'ND', 'RD'];
@@ -334,8 +337,9 @@ const FamilyTree = () => {
     const [treeStructure, setTreeStructure] = useState({ generations: [], childrenOf: {}, parentsOf: {}, spouseOf: {}, personMap: new Map() });
     const [selectedMember, setSelectedMember] = useState(null);
     const [loading, setLoading] = useState(true);
-    const [treeBgId, setTreeBgId] = useState(() => localStorage.getItem('kincore_tree_bg') || '');
-    const [bgPickerOpen, setBgPickerOpen] = useState(false);
+    // Tree background picker — not in use. Light/dark theme is enough for now.
+    // const [treeBgId, setTreeBgId] = useState(() => localStorage.getItem('kincore_tree_bg') || '');
+    // const [bgPickerOpen, setBgPickerOpen] = useState(false);
     const [memberSearchOpen, setMemberSearchOpen] = useState(false);
     const [memberSearchQuery, setMemberSearchQuery] = useState('');
     const [appProfileMember, setAppProfileMember] = useState(null);
@@ -604,14 +608,14 @@ const FamilyTree = () => {
     /* ── App view flag ── */
     const isAppView = new URLSearchParams(window.location.search).get('view') === 'app' || window.location.pathname.includes('/webview/');
     const { theme } = useTheme();
-    const selectedTreeBg = TREE_BACKGROUNDS.find((bg) => bg.id === treeBgId);
-    const canvasColor = selectedTreeBg?.color || (theme === 'dark' ? '#12141C' : (isAppView ? '#F7F5F2' : '#F9FAFB'));
+    // const selectedTreeBg = TREE_BACKGROUNDS.find((bg) => bg.id === treeBgId);
+    const canvasColor = theme === 'dark' ? '#12141C' : (isAppView ? '#F7F5F2' : '#F9FAFB');
 
-    const chooseTreeBackground = (id) => {
-        setTreeBgId(id);
-        localStorage.setItem('kincore_tree_bg', id);
-        setBgPickerOpen(false);
-    };
+    // const chooseTreeBackground = (id) => {
+    //     setTreeBgId(id);
+    //     localStorage.setItem('kincore_tree_bg', id);
+    //     setBgPickerOpen(false);
+    // };
 
     const totalMembers = persons.length;
     const totalGenerations = treeStructure.generations.length;
@@ -869,6 +873,7 @@ const FamilyTree = () => {
                         ? 'left-4 bottom-7 gap-2.5'
                         : 'top-4 right-[368px] space-y-1'
                 }`}>
+                    {/* Tree background picker — commented out. Light/dark theme only for now.
                     <div className="relative">
                         <button
                             type="button"
@@ -898,6 +903,7 @@ const FamilyTree = () => {
                             </div>
                         )}
                     </div>
+                    */}
                     {isAppView ? (
                         <>
                             <button
