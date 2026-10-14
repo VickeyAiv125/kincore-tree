@@ -715,14 +715,15 @@ const FamilyTree = () => {
 
     const memberSearchResults = useMemo(() => {
         const q = memberSearchQuery.trim().toLowerCase();
-        const matched = persons.filter((p) => {
-            if (!q) return true;
+        // The member menu stays empty until the user types. Opening search
+        // must not drop the whole family list over the tree.
+        if (!q) return [];
+        return persons.filter((p) => {
             const name = getPersonName(p).toLowerCase();
             const first = String(p.first_name || '').toLowerCase();
             const last = String(p.last_name || '').toLowerCase();
             return name.includes(q) || first.includes(q) || last.includes(q);
-        });
-        return matched.slice(0, q ? 20 : 8);
+        }).slice(0, 20);
     }, [persons, memberSearchQuery]);
 
     const saveAppProfile = async (fields) => {
@@ -821,8 +822,10 @@ const FamilyTree = () => {
                                 members={totalMembers}
                                 searchActive={memberSearchOpen}
                                 onSearchClick={() => {
-                                    setMemberSearchOpen((v) => !v);
-                                    if (memberSearchOpen) setMemberSearchQuery('');
+                                    setMemberSearchOpen((open) => {
+                                        if (open) setMemberSearchQuery('');
+                                        return !open;
+                                    });
                                 }}
                             />
                             <AppTreeMemberSearch
@@ -838,8 +841,6 @@ const FamilyTree = () => {
                                     const mapped = mapToMember(person);
                                     setSelectedMember(mapped);
                                     setAppProfileMember(mapped);
-                                    setMemberSearchOpen(false);
-                                    setMemberSearchQuery('');
                                 }}
                             />
                             <AppTreeTabs value={treeViewMode} onChange={setTreeViewMode} />

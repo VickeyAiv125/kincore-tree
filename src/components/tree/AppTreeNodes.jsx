@@ -369,7 +369,6 @@ export const AppTreeMemberSearch = ({
             <div className="flex items-center gap-2 px-3 py-2.5 border-b border-[#F0EBE5] dark:border-brand-darkBorder">
                 <Search size={16} className="text-[#9A96A3] shrink-0" />
                 <input
-                    autoFocus
                     value={query}
                     onChange={(e) => onQueryChange?.(e.target.value)}
                     placeholder="Search family member..."
