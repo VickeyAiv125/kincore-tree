@@ -137,7 +137,7 @@ const MigrationMapWebview = () => {
 
     return (
         <div className="bg-[#F6F3EF]">
-            <div className="relative h-[210px] bg-[#F6F3EF]">
+            <div className="relative h-[120px] bg-[#F6F3EF]">
                 {loading ? (
                     <div className="absolute inset-0 flex items-center justify-center">
                         <div className="w-6 h-6 border-2 border-[#FF6A2B] border-t-transparent rounded-full animate-spin" />
