@@ -136,8 +136,8 @@ const MigrationMapWebview = () => {
     });
 
     return (
-        <div className="h-screen overflow-y-auto bg-[#F6F3EF]">
-            <div className="relative h-[150px] bg-[#F6F3EF]">
+        <div className="bg-[#F6F3EF]">
+            <div className="relative h-[96px] bg-[#F6F3EF]">
                 {loading ? (
                     <div className="absolute inset-0 flex items-center justify-center">
                         <div className="w-6 h-6 border-2 border-[#FF6A2B] border-t-transparent rounded-full animate-spin" />
@@ -189,9 +189,9 @@ const MigrationMapWebview = () => {
             </div>
 
             {!loading && stories.length > 0 && (
-                <div className="px-4 pb-8">
-                    <div className="flex items-end justify-between mb-1">
-                        <p className="text-[28px] leading-none font-bold text-[#FF6A2B]">{selectedYear}</p>
+                <div className="px-3 pb-3">
+                    <div className="flex items-center justify-between">
+                        <p className="text-[15px] leading-none font-bold text-[#FF6A2B]">{selectedYear}</p>
                         <p className="text-[10px] font-semibold tracking-[0.16em] text-[#B0ABB6]">TIMELINE</p>
                     </div>
                     <input
@@ -225,8 +225,8 @@ const MigrationMapWebview = () => {
                     </div>
 
                     {selected && (
-                        <article className="mt-3 rounded-2xl bg-white p-3 shadow-sm flex gap-3">
-                            <div className="h-[72px] w-[72px] shrink-0 overflow-hidden rounded-xl bg-[#F3E6DE] flex items-center justify-center">
+                        <article className="mt-2 rounded-2xl bg-white p-2.5 shadow-sm flex gap-2.5">
+                            <div className="h-14 w-14 shrink-0 overflow-hidden rounded-xl bg-[#F3E6DE] flex items-center justify-center">
                                 {selected.image ? (
                                     <img src={selected.image} alt="" className="h-full w-full object-cover" />
                                 ) : (
