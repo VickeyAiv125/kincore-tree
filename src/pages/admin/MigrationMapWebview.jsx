@@ -129,15 +129,15 @@ const MigrationMapWebview = () => {
     const height = 210;
     const placed = stops.map((stop, index) => {
         const span = Math.max(stops.length - 1, 1);
-        const x = stops.length === 1 ? width / 2 : 72 + (index * (width - 144)) / span;
-        const y = index % 2 === 0 ? 62 : 96;
+        const x = stops.length === 1 ? width / 2 : 56 + (index * (width - 112)) / span;
+        const y = index % 2 === 0 ? 74 : 118;
         const active = selected?.source === 'migration' && stop.pointId === selected.id;
         return { ...stop, x, y, arrival: index === 0, active };
     });
 
     return (
-        <div className="bg-[#F6F3EF]">
-            <div className="relative h-[132px] bg-[#F6F3EF]">
+        <div className="min-h-screen bg-[#F6F3EF]">
+            <div className="relative h-[220px] bg-[#F6F3EF]">
                 {loading ? (
                     <div className="absolute inset-0 flex items-center justify-center">
                         <div className="w-6 h-6 border-2 border-[#FF6A2B] border-t-transparent rounded-full animate-spin" />
