@@ -30,6 +30,8 @@ const initials = (label) => {
     return `${parts[0][0]}${parts[1][0]}`.toUpperCase();
 };
 
+const cityOf = (location) => String(location || '').split(',')[0].trim();
+
 const MigrationMapWebview = () => {
     const { familySpaceId } = useParams();
     const [searchParams] = useSearchParams();
@@ -39,6 +41,9 @@ const MigrationMapWebview = () => {
     const [storyOpen, setStoryOpen] = useState(false);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
+    const [query, setQuery] = useState('');
+    const [branch, setBranch] = useState('all');
+    const [zoom, setZoom] = useState(1);
 
     useEffect(() => {
         const fetchWebviewData = async () => {
@@ -86,7 +91,8 @@ const MigrationMapWebview = () => {
                 id: `${point.id}-${list.length}`,
                 pointId: point.id,
                 location: name,
-                year: year || ''
+                year: year || '',
+                branches: point.branches || []
             });
         };
         ordered.forEach((point) => {
@@ -97,11 +103,24 @@ const MigrationMapWebview = () => {
         return list;
     }, [migrationPoints]);
 
+    const needle = query.trim().toLowerCase();
+    const visibleStops = stops.filter((stop) => {
+        if (branch === 'paternal' && Array.isArray(stop.branches) && stop.branches.length > 0) {
+            const paternal = stop.branches.some((item) => /paternal|father/i.test(String(item)));
+            if (!paternal) return false;
+        }
+        if (!needle) return true;
+        return `${stop.location} ${stop.year}`.toLowerCase().includes(needle);
+    });
+
     const selected = stories.find((story) => story.id === selectedId) || stories[0] || null;
     const years = stories.map((story) => Number(story.year)).filter((year) => !Number.isNaN(year) && year > 0);
-    const minYear = years.length ? Math.min(...years) : 1850;
-    const maxYear = Math.max(new Date().getUTCFullYear(), ...(years.length ? years : [minYear]));
-    const selectedYear = Number(selected?.year) || minYear;
+    const dataMin = years.length ? Math.min(...years) : 1850;
+    const dataMax = years.length ? Math.max(...years) : new Date().getUTCFullYear();
+    const trackMin = Math.min(1850, dataMin);
+    const trackMax = Math.max(new Date().getUTCFullYear(), dataMax);
+    const selectedYear = Number(selected?.year) || dataMin;
+    const thumb = trackMax === trackMin ? 50 : ((selectedYear - trackMin) / (trackMax - trackMin)) * 100;
 
     const chooseYear = (year) => {
         const target = Number(year);
@@ -117,145 +136,221 @@ const MigrationMapWebview = () => {
         }
     };
 
+    const imageFor = (stop) => {
+        const match = stories.find((story) => story.image && Number(story.year) === Number(stop.year));
+        if (match?.image) return match.image;
+        if (selected?.image && selected.source === 'migration' && stop.pointId === selected.id) return selected.image;
+        return null;
+    };
+
     if (error) {
         return (
-            <div className="w-full h-screen bg-[#F7F5F2] flex items-center justify-center p-4 text-center">
+            <div className="flex h-screen items-center justify-center bg-[#F6F3EF] p-4 text-center">
                 <p className="text-xs font-semibold text-red-500">{error}</p>
             </div>
         );
     }
 
     const width = 360;
-    const height = 210;
-    const placed = stops.map((stop, index) => {
-        const span = Math.max(stops.length - 1, 1);
-        const x = stops.length === 1 ? width / 2 : 56 + (index * (width - 112)) / span;
-        const y = index % 2 === 0 ? 74 : 118;
-        const active = selected?.source === 'migration' && stop.pointId === selected.id;
-        return { ...stop, x, y, arrival: index === 0, active };
+    const height = 230;
+    const placed = (visibleStops.length ? visibleStops : stops).map((stop, index, list) => {
+        const span = Math.max(list.length - 1, 1);
+        const x = list.length === 1 ? width / 2 : 78 + (index * (width - 156)) / span;
+        const y = index % 2 === 0 ? 118 : 78;
+        return { ...stop, x, y, arrival: index === 0 };
     });
+    const ticks = [
+        { label: trackMin, at: 0 },
+        { label: Math.round(trackMin + (trackMax - trackMin) * 0.25), at: 25 },
+        { label: Math.round(trackMin + (trackMax - trackMin) * 0.5), at: 50 },
+        { label: Math.round(trackMin + (trackMax - trackMin) * 0.75), at: 75 },
+        { label: 'Now', at: 100 }
+    ];
 
     return (
-        <div className="min-h-screen bg-[#F6F3EF]">
-            <div className="relative h-[220px] bg-[#F6F3EF]">
-                {loading ? (
-                    <div className="absolute inset-0 flex items-center justify-center">
-                        <div className="w-6 h-6 border-2 border-[#FF6A2B] border-t-transparent rounded-full animate-spin" />
-                    </div>
-                ) : placed.length === 0 ? (
-                    <div className="absolute inset-0 flex items-center justify-center px-6 text-center">
-                        <p className="text-[11px] font-semibold text-[#9A96A3]">No migration stops yet</p>
-                    </div>
-                ) : (
-                    <svg className="w-full h-full" viewBox={`0 0 ${width} ${height}`} xmlns="http://www.w3.org/2000/svg">
-                        {placed.slice(1).map((stop, index) => {
-                            const from = placed[index];
-                            const midX = (from.x + stop.x) / 2;
-                            const midY = Math.min(from.y, stop.y) - 36;
-                            return (
-                                <path
-                                    key={`route-${stop.id}`}
-                                    d={`M ${from.x} ${from.y} Q ${midX} ${midY} ${stop.x} ${stop.y}`}
-                                    fill="none"
-                                    stroke="#FF6A2B"
-                                    strokeWidth="2.2"
-                                    strokeDasharray="1.5 5"
-                                    strokeLinecap="round"
-                                />
-                            );
-                        })}
-                        {placed.map((stop) => (
-                            <g key={stop.id} opacity={selected?.source === 'migration' && !stop.active ? 0.45 : 1}>
-                                <circle cx={stop.x} cy={stop.y} r="22" fill="#FFE8DC" />
-                                <circle cx={stop.x} cy={stop.y} r="16" fill="#FFFFFF" stroke="#FF6A2B" strokeWidth="2" />
-                                <text x={stop.x} y={stop.y + 4} textAnchor="middle" fill="#FF6A2B" fontSize="9" fontWeight="700">
-                                    {initials(stop.location)}
-                                </text>
-                                <text x={stop.x} y={stop.y + 34} textAnchor="middle" fill="#6F6A78" fontSize="8" fontWeight="600">
-                                    {String(stop.location).split(',')[0]}{stop.year ? `, ${stop.year}` : ''}
-                                </text>
-                                {stop.arrival && (
-                                    <g>
-                                        <rect x={stop.x - 22} y={stop.y + 46} width="44" height="14" rx="7" fill="#FFF1EA" />
-                                        <text x={stop.x} y={stop.y + 56} textAnchor="middle" fill="#FF6A2B" fontSize="7" fontWeight="700">
-                                            Arrival
-                                        </text>
-                                    </g>
-                                )}
-                            </g>
-                        ))}
+        <div className="min-h-screen bg-[#F4F1EC] px-4 pb-6 pt-3 text-[#1C1C1E]">
+            <label className="flex items-center gap-2 rounded-full bg-white px-4 py-2.5 shadow-sm">
+                <svg viewBox="0 0 24 24" className="h-4 w-4 text-[#B0A8A0]" fill="none" stroke="currentColor" strokeWidth="2">
+                    <circle cx="11" cy="11" r="7" />
+                    <path d="M20 20l-3.5-3.5" strokeLinecap="round" />
+                </svg>
+                <input
+                    value={query}
+                    onChange={(event) => setQuery(event.target.value)}
+                    placeholder="Search places or people..."
+                    className="w-full bg-transparent text-[13px] outline-none placeholder:text-[#C2B8B0]"
+                />
+            </label>
+
+            <div className="relative mt-3">
+                <div className="flex items-center gap-2 pr-14">
+                    <button
+                        type="button"
+                        onClick={() => setBranch('all')}
+                        className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-[12px] font-semibold ${
+                            branch === 'all' ? 'bg-[#FF6A2B] text-white' : 'bg-white text-[#6F6A78] shadow-sm'
+                        }`}
+                    >
+                        <span className="text-[13px]">☺</span> All Branches
+                    </button>
+                    <button
+                        type="button"
+                        onClick={() => setBranch('paternal')}
+                        className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-[12px] font-semibold ${
+                            branch === 'paternal' ? 'bg-[#FF6A2B] text-white' : 'bg-white text-[#6F6A78] shadow-sm'
+                        }`}
+                    >
+                        <span className="text-[13px]">☺</span> Paternal
+                    </button>
+                    <button type="button" className="grid h-8 w-8 place-items-center rounded-full bg-white text-[#6F6A78] shadow-sm" aria-label="People">
+                        <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="1.8">
+                            <circle cx="12" cy="8" r="3" />
+                            <path d="M5 19c1.4-3 3.8-4.5 7-4.5S17.6 16 19 19" strokeLinecap="round" />
+                        </svg>
+                    </button>
+                </div>
+
+                <div className="absolute right-0 top-0 z-10 flex flex-col overflow-hidden rounded-2xl bg-white shadow-sm">
+                    <button type="button" onClick={() => setZoom((value) => Math.min(1.6, value + 0.15))} className="grid h-9 w-9 place-items-center text-lg text-[#FF6A2B]" aria-label="Zoom in">+</button>
+                    <button type="button" onClick={() => setZoom((value) => Math.max(0.8, value - 0.15))} className="grid h-9 w-9 place-items-center border-t border-[#F1EBE6] text-lg text-[#FF6A2B]" aria-label="Zoom out">−</button>
+                </div>
+                <button
+                    type="button"
+                    onClick={() => setZoom(1)}
+                    className="absolute right-0 top-[86px] z-10 grid h-9 w-9 place-items-center rounded-full bg-white text-[#FF6A2B] shadow-sm"
+                    aria-label="Reset map"
+                >
+                    <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="1.8">
+                        <circle cx="12" cy="12" r="3" />
+                        <path d="M12 3v3M12 18v3M3 12h3M18 12h3" strokeLinecap="round" />
                     </svg>
-                )}
+                </button>
+
+                <div className="relative mt-2 h-[250px] overflow-hidden">
+                    {loading ? (
+                        <div className="absolute inset-0 flex items-center justify-center">
+                            <div className="h-6 w-6 animate-spin rounded-full border-2 border-[#FF6A2B] border-t-transparent" />
+                        </div>
+                    ) : placed.length === 0 ? (
+                        <div className="absolute inset-0 flex items-center justify-center px-6 text-center">
+                            <p className="text-[12px] font-semibold text-[#9A96A3]">No migration stops yet</p>
+                        </div>
+                    ) : (
+                        <div className="h-full w-full origin-center" style={{ transform: `scale(${zoom})` }}>
+                            <svg className="absolute inset-0 h-full w-full" viewBox={`0 0 ${width} ${height}`} xmlns="http://www.w3.org/2000/svg">
+                                {placed.slice(1).map((stop, index) => {
+                                    const from = placed[index];
+                                    const midX = (from.x + stop.x) / 2;
+                                    const midY = Math.min(from.y, stop.y) - 48;
+                                    return (
+                                        <path
+                                            key={`route-${stop.id}`}
+                                            d={`M ${from.x} ${from.y} Q ${midX} ${midY} ${stop.x} ${stop.y}`}
+                                            fill="none"
+                                            stroke="#FF8A5B"
+                                            strokeWidth="2"
+                                            strokeDasharray="1.2 5"
+                                            strokeLinecap="round"
+                                        />
+                                    );
+                                })}
+                            </svg>
+                            {placed.map((stop) => {
+                                const photo = imageFor(stop);
+                                return (
+                                    <button
+                                        key={stop.id}
+                                        type="button"
+                                        onClick={() => chooseYear(stop.year)}
+                                        className="absolute -translate-x-1/2 -translate-y-1/2 text-center"
+                                        style={{ left: `${(stop.x / width) * 100}%`, top: `${(stop.y / height) * 100}%` }}
+                                    >
+                                        <span className="relative mx-auto grid h-14 w-14 place-items-center overflow-hidden rounded-full border-[3px] border-[#FF6A2B] bg-[#FFE8DC] shadow-sm">
+                                            {photo ? (
+                                                <img src={photo} alt="" className="h-full w-full object-cover" />
+                                            ) : (
+                                                <span className="text-[13px] font-bold text-[#FF6A2B]">{initials(cityOf(stop.location))}</span>
+                                            )}
+                                            {stop.arrival && (
+                                                <span className="absolute -bottom-1 rounded-full bg-[#FFF1EA] px-1.5 py-[1px] text-[8px] font-bold text-[#FF6A2B]">
+                                                    Arrival
+                                                </span>
+                                            )}
+                                        </span>
+                                        <span className="mt-1 block max-w-[92px] truncate rounded-full bg-white/90 px-1.5 py-0.5 text-[10px] font-semibold text-[#6F6A78]">
+                                            {cityOf(stop.location)}{stop.year ? `, ${stop.year}` : ''}
+                                        </span>
+                                    </button>
+                                );
+                            })}
+                        </div>
+                    )}
+                </div>
             </div>
 
-            {!loading && stories.length > 0 && (
-                <div className="px-4 pt-3 pb-4">
-                    <div className="flex items-center justify-between mb-1">
-                        <p className="text-[15px] leading-none font-bold text-[#FF6A2B]">{selectedYear}</p>
-                        <p className="text-[10px] font-semibold tracking-[0.16em] text-[#B0ABB6]">TIMELINE</p>
+            {!loading && selected && (
+                <div className="mt-1">
+                    <div className="mb-1 flex items-end justify-between">
+                        <p className="text-[28px] font-bold leading-none text-[#FF6A2B]">{selectedYear}</p>
+                        <p className="text-[10px] font-semibold tracking-[0.18em] text-[#C2B8B0]">TIMELINE</p>
                     </div>
-                    <input
-                        aria-label="Migration timeline"
-                        type="range"
-                        min={minYear}
-                        max={maxYear}
-                        value={Math.min(Math.max(selectedYear, minYear), maxYear)}
-                        onChange={(event) => chooseYear(event.target.value)}
-                        className="w-full accent-[#FF6A2B]"
-                    />
-                    <div className="mt-3 flex gap-2 overflow-x-auto pb-1">
-                        {stories.map((story) => {
-                            const active = story.id === selected?.id;
-                            return (
-                                <button
-                                    key={story.id}
-                                    type="button"
-                                    onClick={() => {
-                                        setSelectedId(story.id);
-                                        setStoryOpen(false);
-                                    }}
-                                    className={`shrink-0 rounded-full px-3.5 py-1.5 text-[12px] font-semibold ${
-                                        active ? 'bg-[#FF6A2B] text-white' : 'bg-white text-[#6F6A78]'
-                                    }`}
-                                >
-                                    {story.year || 'Story'}
-                                </button>
-                            );
-                        })}
+                    <div className="relative pt-7">
+                        <span
+                            className="absolute top-0 -translate-x-1/2 rounded-full bg-white px-2 py-0.5 text-[10px] font-bold text-[#1C1C1E] shadow-sm"
+                            style={{ left: `${thumb}%` }}
+                        >
+                            {selectedYear}
+                        </span>
+                        <input
+                            aria-label="Migration timeline"
+                            type="range"
+                            min={trackMin}
+                            max={trackMax}
+                            value={Math.min(Math.max(selectedYear, trackMin), trackMax)}
+                            onChange={(event) => chooseYear(event.target.value)}
+                            className="w-full accent-[#FF6A2B]"
+                        />
+                        <div className="mt-1 flex justify-between text-[10px] font-medium text-[#B0A8A0]">
+                            {ticks.map((tick) => (
+                                <span key={`${tick.label}-${tick.at}`}>{tick.label}</span>
+                            ))}
+                        </div>
                     </div>
 
-                    {selected && (
-                        <article className="mt-3 rounded-2xl bg-white p-3 shadow-sm flex gap-3">
-                            <div className="h-20 w-20 shrink-0 overflow-hidden rounded-xl bg-[#F3E6DE] flex items-center justify-center">
-                                {selected.image ? (
-                                    <img src={selected.image} alt="" className="h-full w-full object-cover" />
-                                ) : (
-                                    <span className="text-sm font-bold text-[#FF6A2B]">{initials(selected.person_name || selected.location || selected.title)}</span>
-                                )}
-                            </div>
-                            <div className="min-w-0 flex-1">
-                                {selected.location ? (
-                                    <p className="text-[10px] font-bold tracking-wide text-[#FF6A2B]">📍 {selected.location.toUpperCase()}</p>
-                                ) : null}
-                                <h2 className="mt-0.5 text-[15px] font-bold leading-tight text-[#1F1B24]">{selected.title}</h2>
-                                <p className="mt-1 text-[12px] text-[#8A8492]">
-                                    {selected.year || 'Profile'}{selected.person_name ? ` • ${selected.person_name}` : ''}
-                                </p>
-                                {storyOpen && selected.body ? (
-                                    <p className="mt-2 text-[13px] leading-5 text-[#4E4854] whitespace-pre-wrap">{selected.body}</p>
-                                ) : null}
-                                {selected.body ? (
+                    <article className="mt-3 flex gap-3 rounded-[22px] bg-white p-3 shadow-[0_8px_24px_rgba(80,40,20,0.06)]">
+                        <div className="h-[84px] w-[84px] shrink-0 overflow-hidden rounded-2xl bg-[#F3E6DE]">
+                            {selected.image ? (
+                                <img src={selected.image} alt="" className="h-full w-full object-cover" />
+                            ) : (
+                                <div className="grid h-full w-full place-items-center text-sm font-bold text-[#FF6A2B]">
+                                    {initials(selected.person_name || selected.location || selected.title)}
+                                </div>
+                            )}
+                        </div>
+                        <div className="min-w-0 flex-1">
+                            {selected.location ? (
+                                <p className="text-[10px] font-bold tracking-wide text-[#FF6A2B]">📍 {selected.location.toUpperCase()}</p>
+                            ) : null}
+                            <h2 className="mt-0.5 text-[16px] font-bold leading-tight">{selected.title}</h2>
+                            <p className="mt-1 text-[12px] text-[#8A8492]">
+                                {selected.year || 'Profile'}{selected.person_name ? ` • ${selected.person_name}` : ''}
+                            </p>
+                            {selected.body ? (
+                                <div className="mt-2 flex justify-end">
                                     <button
                                         type="button"
                                         onClick={() => setStoryOpen((open) => !open)}
-                                        className="mt-2 rounded-full bg-[#FFF1EA] px-3 py-1 text-[12px] font-semibold text-[#FF6A2B]"
+                                        className="rounded-full bg-[#FFF1EA] px-3 py-1 text-[12px] font-semibold text-[#FF6A2B]"
                                     >
                                         {storyOpen ? 'Hide story' : 'Read Story →'}
                                     </button>
-                                ) : null}
-                            </div>
-                        </article>
-                    )}
+                                </div>
+                            ) : null}
+                        </div>
+                    </article>
+                    {storyOpen && selected.body ? (
+                        <p className="mt-2 px-1 text-[13px] leading-5 text-[#4E4854] whitespace-pre-wrap">{selected.body}</p>
+                    ) : null}
                 </div>
             )}
         </div>
