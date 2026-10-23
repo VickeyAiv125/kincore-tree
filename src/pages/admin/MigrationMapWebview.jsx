@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { useParams, useSearchParams } from 'react-router-dom';
 import { useTheme } from '../../context/ThemeContext';
 
@@ -72,6 +72,7 @@ const MigrationMapWebview = () => {
     const [query, setQuery] = useState('');
     const [branch, setBranch] = useState('all');
     const [zoom, setZoom] = useState(1);
+    const trackRef = useRef(null);
 
     useEffect(() => {
         const fetchWebviewData = async () => {
@@ -199,13 +200,28 @@ const MigrationMapWebview = () => {
         const y = index % 2 === 0 ? 118 : 78;
         return { ...stop, x, y, arrival: index === 0 };
     });
+    const yearSpan = Math.max(trackMax - trackMin, 1);
+    const clampedThumb = Math.min(100, Math.max(0, thumb));
     const ticks = [
-        { label: trackMin, at: 0 },
-        { label: Math.round(trackMin + (trackMax - trackMin) * 0.25), at: 25 },
-        { label: Math.round(trackMin + (trackMax - trackMin) * 0.5), at: 50 },
-        { label: Math.round(trackMin + (trackMax - trackMin) * 0.75), at: 75 },
+        { label: String(trackMin), at: 0 },
+        ...[1900, 1950, 2000]
+            .filter((year) => year > trackMin && year < trackMax)
+            .map((year) => ({ label: String(year), at: ((year - trackMin) / yearSpan) * 100 })),
         { label: 'Now', at: 100 }
     ];
+    const alongTrack = (percent) => `calc(11px + (100% - 22px) * ${percent / 100})`;
+    const yearFromClientX = (clientX) => {
+        const rect = trackRef.current?.getBoundingClientRect();
+        if (!rect) return selectedYear;
+        const pad = 11;
+        const usable = Math.max(rect.width - pad * 2, 1);
+        const ratio = Math.min(1, Math.max(0, (clientX - rect.left - pad) / usable));
+        return Math.round(trackMin + ratio * yearSpan);
+    };
+    const scrubTimeline = (event) => {
+        if (event.buttons === 0 && event.type === 'pointermove') return;
+        chooseYear(yearFromClientX(event.clientX));
+    };
 
     return (
         <div className="min-h-screen px-4 pb-6 pt-3" style={{ background: color.page, color: color.text }}>
@@ -336,28 +352,63 @@ const MigrationMapWebview = () => {
                 <div className="mt-1">
                     <div className="mb-1 flex items-end justify-between">
                         <p className="text-[28px] font-bold leading-none text-[#FF6A2B]">{selectedYear}</p>
-                        <p className="text-[10px] font-semibold tracking-[0.18em]" style={{ color: color.faint }}>TIMELINE</p>
+                        <p className="pb-1 text-[11px] font-semibold tracking-[0.22em]" style={{ color: color.faint }}>TIMELINE</p>
                     </div>
-                    <div className="relative pt-7">
+                    <div className="relative pt-8">
                         <span
-                            className="absolute top-0 -translate-x-1/2 rounded-full px-2 py-0.5 text-[10px] font-bold shadow-sm"
-                            style={{ background: color.card, color: color.text }}
-                            style={{ left: `${thumb}%` }}
+                            className="absolute top-0 z-20 -translate-x-1/2 rounded-full px-2.5 py-0.5 text-[12px] font-bold leading-4 shadow-[0_2px_8px_rgba(28,28,30,0.12)]"
+                            style={{ left: alongTrack(clampedThumb), background: color.card, color: color.text }}
                         >
                             {selectedYear}
                         </span>
-                        <input
+                        <div
+                            ref={trackRef}
+                            role="slider"
+                            tabIndex={0}
                             aria-label="Migration timeline"
-                            type="range"
-                            min={trackMin}
-                            max={trackMax}
-                            value={Math.min(Math.max(selectedYear, trackMin), trackMax)}
-                            onChange={(event) => chooseYear(event.target.value)}
-                            className="w-full accent-[#FF6A2B]"
-                        />
-                        <div className="mt-1 flex justify-between text-[10px] font-medium" style={{ color: color.faint }}>
+                            aria-valuemin={trackMin}
+                            aria-valuemax={trackMax}
+                            aria-valuenow={Math.min(Math.max(selectedYear, trackMin), trackMax)}
+                            className="relative z-10 h-7 cursor-pointer touch-none outline-none"
+                            onPointerDown={(event) => {
+                                event.currentTarget.setPointerCapture(event.pointerId);
+                                scrubTimeline(event);
+                            }}
+                            onPointerMove={scrubTimeline}
+                            onKeyDown={(event) => {
+                                if (event.key === 'ArrowRight' || event.key === 'ArrowUp') chooseYear(selectedYear + 1);
+                                if (event.key === 'ArrowLeft' || event.key === 'ArrowDown') chooseYear(selectedYear - 1);
+                            }}
+                        >
+                            <div
+                                className="absolute top-1/2 h-[7px] -translate-y-1/2 rounded-full"
+                                style={{ left: 11, right: 11, background: dark ? '#3A3D4A' : '#E4E2EC' }}
+                            >
+                                <div
+                                    className="h-full rounded-full"
+                                    style={{ width: `${clampedThumb}%`, background: dark ? '#C4846A' : '#F0B0A0' }}
+                                />
+                            </div>
+                            <span
+                                className="absolute top-[calc(50%+5px)] z-10 h-[22px] w-[22px] -translate-x-1/2 -translate-y-1/2 rounded-full border-[3px] shadow-[0_1px_4px_rgba(28,28,30,0.18)]"
+                                style={{ left: alongTrack(clampedThumb), background: '#FF6A2B', borderColor: dark ? '#1C1E28' : '#FFFFFF' }}
+                            />
+                        </div>
+                        <div className="relative -mt-2.5 h-4 text-[11px] font-medium" style={{ color: color.faint }}>
                             {ticks.map((tick) => (
-                                <span key={`${tick.label}-${tick.at}`}>{tick.label}</span>
+                                <span
+                                    key={`${tick.label}-${tick.at}`}
+                                    className="absolute top-0"
+                                    style={
+                                        tick.at === 0
+                                            ? { left: 0 }
+                                            : tick.at === 100
+                                                ? { right: 0 }
+                                                : { left: alongTrack(tick.at), transform: 'translateX(-50%)' }
+                                    }
+                                >
+                                    {tick.label}
+                                </span>
                             ))}
                         </div>
                     </div>
@@ -374,7 +425,12 @@ const MigrationMapWebview = () => {
                         </div>
                         <div className="min-w-0 flex-1">
                             {selected.location ? (
-                                <p className="text-[10px] font-bold tracking-wide text-[#FF6A2B]">📍 {selected.location.toUpperCase()}</p>
+                                <p className="flex items-center gap-1 text-[11px] font-bold tracking-wide text-[#FF6A2B]">
+                                    <svg viewBox="0 0 24 24" className="h-3.5 w-3.5 shrink-0" fill="currentColor" aria-hidden="true">
+                                        <path d="M12 2.5a7 7 0 0 0-7 7c0 5.1 6.1 11.3 6.4 11.6a.9.9 0 0 0 1.2 0C12.9 20.8 19 14.6 19 9.5a7 7 0 0 0-7-7Zm0 9.5a2.5 2.5 0 1 1 0-5 2.5 2.5 0 0 1 0 5Z" />
+                                    </svg>
+                                    {selected.location.toUpperCase()}
+                                </p>
                             ) : null}
                             <h2 className="mt-0.5 text-[16px] font-bold leading-tight">{selected.title}</h2>
                             <p className="mt-1 text-[12px]" style={{ color: color.muted }}>
