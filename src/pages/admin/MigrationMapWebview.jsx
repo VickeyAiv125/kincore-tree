@@ -350,13 +350,13 @@ const MigrationMapWebview = () => {
 
             {!loading && selected && (
                 <div className="mt-1">
-                    <div className="mb-0.5 flex items-center justify-between">
+                    <div className="flex items-center justify-between">
                         <p className="text-[13px] font-semibold leading-none text-[#FF6A2B]">{selectedYear}</p>
                         <p className="text-[13px] font-semibold leading-none tracking-[0.12em]" style={{ color: color.faint }}>TIMELINE</p>
                     </div>
-                    <div className="relative pt-6">
+                    <div className="relative pt-3.5">
                         <span
-                            className="absolute top-0 z-20 -translate-x-1/2 rounded-full px-2.5 py-0.5 text-[12px] font-bold leading-4 shadow-[0_2px_8px_rgba(28,28,30,0.12)]"
+                            className="absolute top-0 z-20 -translate-x-1/2 rounded-full px-2 py-px text-[12px] font-bold leading-none shadow-[0_2px_8px_rgba(28,28,30,0.12)]"
                             style={{ left: alongTrack(clampedThumb), background: color.card, color: color.text }}
                         >
                             {selectedYear}
@@ -369,7 +369,7 @@ const MigrationMapWebview = () => {
                             aria-valuemin={trackMin}
                             aria-valuemax={trackMax}
                             aria-valuenow={Math.min(Math.max(selectedYear, trackMin), trackMax)}
-                            className="relative z-10 h-7 cursor-pointer touch-none outline-none"
+                            className="relative z-10 h-5 cursor-pointer touch-none outline-none"
                             onPointerDown={(event) => {
                                 event.currentTarget.setPointerCapture(event.pointerId);
                                 scrubTimeline(event);
@@ -381,7 +381,7 @@ const MigrationMapWebview = () => {
                             }}
                         >
                             <div
-                                className="absolute top-1/2 h-[7px] -translate-y-1/2 rounded-full"
+                                className="absolute top-1 h-[7px] -translate-y-1/2 rounded-full"
                                 style={{ left: 11, right: 11, background: dark ? '#3A3D4A' : '#E4E2EC' }}
                             >
                                 <div
@@ -390,7 +390,7 @@ const MigrationMapWebview = () => {
                                 />
                             </div>
                             <span
-                                className="absolute top-[calc(50%+5px)] z-10 h-[22px] w-[22px] -translate-x-1/2 -translate-y-1/2 rounded-full border-[3px] shadow-[0_1px_4px_rgba(28,28,30,0.18)]"
+                                className="absolute top-1 z-10 h-[22px] w-[22px] -translate-x-1/2 -translate-y-1/2 rounded-full border-[3px] shadow-[0_1px_4px_rgba(28,28,30,0.18)]"
                                 style={{ left: alongTrack(clampedThumb), background: '#FF6A2B', borderColor: dark ? '#1C1E28' : '#FFFFFF' }}
                             />
                         </div>
