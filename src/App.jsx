@@ -31,6 +31,7 @@ function OAuthSync() {
       || location.pathname.includes('/reset-password')
       || location.pathname.includes('/auth/callback')
       || location.pathname.includes('/family-tree/webview')
+      || location.pathname.includes('/migration-map/webview')
     ) {
       return;
     }

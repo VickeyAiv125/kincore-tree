@@ -4,7 +4,9 @@ const ThemeContext = createContext();
 
 const isTreeWebview = () => {
     const params = new URLSearchParams(window.location.search);
-    return params.get('view') === 'app' || window.location.pathname.includes('/family-tree/webview');
+    return params.get('view') === 'app'
+        || window.location.pathname.includes('/family-tree/webview')
+        || window.location.pathname.includes('/migration-map/webview');
 };
 
 const readInitialTheme = () => {

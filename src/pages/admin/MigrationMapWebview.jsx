@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { useParams, useSearchParams } from 'react-router-dom';
+import { useTheme } from '../../context/ThemeContext';
 
 const API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api';
 
@@ -35,6 +36,33 @@ const cityOf = (location) => String(location || '').split(',')[0].trim();
 const MigrationMapWebview = () => {
     const { familySpaceId } = useParams();
     const [searchParams] = useSearchParams();
+    const { theme } = useTheme();
+    const dark = theme === 'dark';
+    const color = dark
+        ? {
+            page: '#12141C',
+            text: '#F4F1EC',
+            muted: '#A8A3B0',
+            faint: '#7E7886',
+            card: '#1C1E28',
+            chip: '#2A2D38',
+            line: '#343846',
+            soft: '#3A241C',
+            photo: '#2A2430',
+            story: '#D5D0D8'
+        }
+        : {
+            page: '#F4F1EC',
+            text: '#1C1C1E',
+            muted: '#6F6A78',
+            faint: '#B0A8A0',
+            card: '#FFFFFF',
+            chip: '#FFFFFF',
+            line: '#F1EBE6',
+            soft: '#FFF1EA',
+            photo: '#F3E6DE',
+            story: '#4E4854'
+        };
     const [migrationPoints, setMigrationPoints] = useState([]);
     const [stories, setStories] = useState([]);
     const [selectedId, setSelectedId] = useState(null);
@@ -75,6 +103,18 @@ const MigrationMapWebview = () => {
         };
         fetchWebviewData();
     }, [familySpaceId, searchParams]);
+
+    useEffect(() => {
+        const root = document.documentElement;
+        root.style.colorScheme = dark ? 'dark' : 'light';
+        root.style.backgroundColor = color.page;
+        document.body.style.backgroundColor = color.page;
+        return () => {
+            root.style.colorScheme = '';
+            root.style.backgroundColor = '';
+            document.body.style.backgroundColor = '';
+        };
+    }, [dark, color.page]);
 
     const stops = useMemo(() => {
         const ordered = [...migrationPoints].sort((a, b) => sortKey(a) - sortKey(b));
@@ -145,7 +185,7 @@ const MigrationMapWebview = () => {
 
     if (error) {
         return (
-            <div className="flex h-screen items-center justify-center bg-[#F6F3EF] p-4 text-center">
+            <div className="flex h-screen items-center justify-center p-4 text-center" style={{ background: color.page }}>
                 <p className="text-xs font-semibold text-red-500">{error}</p>
             </div>
         );
@@ -168,8 +208,8 @@ const MigrationMapWebview = () => {
     ];
 
     return (
-        <div className="min-h-screen bg-[#F4F1EC] px-4 pb-6 pt-3 text-[#1C1C1E]">
-            <label className="flex items-center gap-2 rounded-full bg-white px-4 py-2.5 shadow-sm">
+        <div className="min-h-screen px-4 pb-6 pt-3" style={{ background: color.page, color: color.text }}>
+            <label className="flex items-center gap-2 rounded-full px-4 py-2.5 shadow-sm" style={{ background: color.card }}>
                 <svg viewBox="0 0 24 24" className="h-4 w-4 text-[#B0A8A0]" fill="none" stroke="currentColor" strokeWidth="2">
                     <circle cx="11" cy="11" r="7" />
                     <path d="M20 20l-3.5-3.5" strokeLinecap="round" />
@@ -178,7 +218,8 @@ const MigrationMapWebview = () => {
                     value={query}
                     onChange={(event) => setQuery(event.target.value)}
                     placeholder="Search places or people..."
-                    className="w-full bg-transparent text-[13px] outline-none placeholder:text-[#C2B8B0]"
+                    className="w-full bg-transparent text-[13px] outline-none"
+                    style={{ color: color.text }}
                 />
             </label>
 
@@ -188,8 +229,9 @@ const MigrationMapWebview = () => {
                         type="button"
                         onClick={() => setBranch('all')}
                         className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-[12px] font-semibold ${
-                            branch === 'all' ? 'bg-[#FF6A2B] text-white' : 'bg-white text-[#6F6A78] shadow-sm'
+                            branch === 'all' ? 'bg-[#FF6A2B] text-white' : 'shadow-sm'
                         }`}
+                        style={branch === 'all' ? undefined : { background: color.chip, color: color.muted }}
                     >
                         <span className="text-[13px]">☺</span> All Branches
                     </button>
@@ -197,12 +239,13 @@ const MigrationMapWebview = () => {
                         type="button"
                         onClick={() => setBranch('paternal')}
                         className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-[12px] font-semibold ${
-                            branch === 'paternal' ? 'bg-[#FF6A2B] text-white' : 'bg-white text-[#6F6A78] shadow-sm'
+                            branch === 'paternal' ? 'bg-[#FF6A2B] text-white' : 'shadow-sm'
                         }`}
+                        style={branch === 'paternal' ? undefined : { background: color.chip, color: color.muted }}
                     >
                         <span className="text-[13px]">☺</span> Paternal
                     </button>
-                    <button type="button" className="grid h-8 w-8 place-items-center rounded-full bg-white text-[#6F6A78] shadow-sm" aria-label="People">
+                    <button type="button" className="grid h-8 w-8 place-items-center rounded-full shadow-sm" style={{ background: color.chip, color: color.muted }} aria-label="People">
                         <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="1.8">
                             <circle cx="12" cy="8" r="3" />
                             <path d="M5 19c1.4-3 3.8-4.5 7-4.5S17.6 16 19 19" strokeLinecap="round" />
@@ -210,14 +253,15 @@ const MigrationMapWebview = () => {
                     </button>
                 </div>
 
-                <div className="absolute right-0 top-0 z-10 flex flex-col overflow-hidden rounded-2xl bg-white shadow-sm">
+                <div className="absolute right-0 top-0 z-10 flex flex-col overflow-hidden rounded-2xl shadow-sm" style={{ background: color.card }}>
                     <button type="button" onClick={() => setZoom((value) => Math.min(1.6, value + 0.15))} className="grid h-9 w-9 place-items-center text-lg text-[#FF6A2B]" aria-label="Zoom in">+</button>
-                    <button type="button" onClick={() => setZoom((value) => Math.max(0.8, value - 0.15))} className="grid h-9 w-9 place-items-center border-t border-[#F1EBE6] text-lg text-[#FF6A2B]" aria-label="Zoom out">−</button>
+                    <button type="button" onClick={() => setZoom((value) => Math.max(0.8, value - 0.15))} className="grid h-9 w-9 place-items-center border-t text-lg text-[#FF6A2B]" style={{ borderColor: color.line }} aria-label="Zoom out">−</button>
                 </div>
                 <button
                     type="button"
                     onClick={() => setZoom(1)}
-                    className="absolute right-0 top-[86px] z-10 grid h-9 w-9 place-items-center rounded-full bg-white text-[#FF6A2B] shadow-sm"
+                    className="absolute right-0 top-[86px] z-10 grid h-9 w-9 place-items-center rounded-full text-[#FF6A2B] shadow-sm"
+                    style={{ background: color.card }}
                     aria-label="Reset map"
                 >
                     <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="1.8">
@@ -233,7 +277,7 @@ const MigrationMapWebview = () => {
                         </div>
                     ) : placed.length === 0 ? (
                         <div className="absolute inset-0 flex items-center justify-center px-6 text-center">
-                            <p className="text-[12px] font-semibold text-[#9A96A3]">No migration stops yet</p>
+                            <p className="text-[12px] font-semibold" style={{ color: color.muted }}>No migration stops yet</p>
                         </div>
                     ) : (
                         <div className="h-full w-full origin-center" style={{ transform: `scale(${zoom})` }}>
@@ -272,12 +316,12 @@ const MigrationMapWebview = () => {
                                                 <span className="text-[13px] font-bold text-[#FF6A2B]">{initials(cityOf(stop.location))}</span>
                                             )}
                                             {stop.arrival && (
-                                                <span className="absolute -bottom-1 rounded-full bg-[#FFF1EA] px-1.5 py-[1px] text-[8px] font-bold text-[#FF6A2B]">
+                                                <span className="absolute -bottom-1 rounded-full px-1.5 py-[1px] text-[8px] font-bold text-[#FF6A2B]" style={{ background: color.soft }}>
                                                     Arrival
                                                 </span>
                                             )}
                                         </span>
-                                        <span className="mt-1 block max-w-[92px] truncate rounded-full bg-white/90 px-1.5 py-0.5 text-[10px] font-semibold text-[#6F6A78]">
+                                        <span className="mt-1 block max-w-[92px] truncate rounded-full px-1.5 py-0.5 text-[10px] font-semibold" style={{ background: dark ? 'rgba(28,30,40,0.92)' : 'rgba(255,255,255,0.9)', color: color.muted }}>
                                             {cityOf(stop.location)}{stop.year ? `, ${stop.year}` : ''}
                                         </span>
                                     </button>
@@ -292,11 +336,12 @@ const MigrationMapWebview = () => {
                 <div className="mt-1">
                     <div className="mb-1 flex items-end justify-between">
                         <p className="text-[28px] font-bold leading-none text-[#FF6A2B]">{selectedYear}</p>
-                        <p className="text-[10px] font-semibold tracking-[0.18em] text-[#C2B8B0]">TIMELINE</p>
+                        <p className="text-[10px] font-semibold tracking-[0.18em]" style={{ color: color.faint }}>TIMELINE</p>
                     </div>
                     <div className="relative pt-7">
                         <span
-                            className="absolute top-0 -translate-x-1/2 rounded-full bg-white px-2 py-0.5 text-[10px] font-bold text-[#1C1C1E] shadow-sm"
+                            className="absolute top-0 -translate-x-1/2 rounded-full px-2 py-0.5 text-[10px] font-bold shadow-sm"
+                            style={{ background: color.card, color: color.text }}
                             style={{ left: `${thumb}%` }}
                         >
                             {selectedYear}
@@ -310,15 +355,15 @@ const MigrationMapWebview = () => {
                             onChange={(event) => chooseYear(event.target.value)}
                             className="w-full accent-[#FF6A2B]"
                         />
-                        <div className="mt-1 flex justify-between text-[10px] font-medium text-[#B0A8A0]">
+                        <div className="mt-1 flex justify-between text-[10px] font-medium" style={{ color: color.faint }}>
                             {ticks.map((tick) => (
                                 <span key={`${tick.label}-${tick.at}`}>{tick.label}</span>
                             ))}
                         </div>
                     </div>
 
-                    <article className="mt-3 flex gap-3 rounded-[22px] bg-white p-3 shadow-[0_8px_24px_rgba(80,40,20,0.06)]">
-                        <div className="h-[84px] w-[84px] shrink-0 overflow-hidden rounded-2xl bg-[#F3E6DE]">
+                    <article className="mt-3 flex gap-3 rounded-[22px] p-3 shadow-[0_8px_24px_rgba(0,0,0,0.12)]" style={{ background: color.card }}>
+                        <div className="h-[84px] w-[84px] shrink-0 overflow-hidden rounded-2xl" style={{ background: color.photo }}>
                             {selected.image ? (
                                 <img src={selected.image} alt="" className="h-full w-full object-cover" />
                             ) : (
@@ -332,7 +377,7 @@ const MigrationMapWebview = () => {
                                 <p className="text-[10px] font-bold tracking-wide text-[#FF6A2B]">📍 {selected.location.toUpperCase()}</p>
                             ) : null}
                             <h2 className="mt-0.5 text-[16px] font-bold leading-tight">{selected.title}</h2>
-                            <p className="mt-1 text-[12px] text-[#8A8492]">
+                            <p className="mt-1 text-[12px]" style={{ color: color.muted }}>
                                 {selected.year || 'Profile'}{selected.person_name ? ` • ${selected.person_name}` : ''}
                             </p>
                             {selected.body ? (
@@ -340,7 +385,8 @@ const MigrationMapWebview = () => {
                                     <button
                                         type="button"
                                         onClick={() => setStoryOpen((open) => !open)}
-                                        className="rounded-full bg-[#FFF1EA] px-3 py-1 text-[12px] font-semibold text-[#FF6A2B]"
+                                        className="rounded-full px-3 py-1 text-[12px] font-semibold text-[#FF6A2B]"
+                                        style={{ background: color.soft }}
                                     >
                                         {storyOpen ? 'Hide story' : 'Read Story →'}
                                     </button>
@@ -349,7 +395,7 @@ const MigrationMapWebview = () => {
                         </div>
                     </article>
                     {storyOpen && selected.body ? (
-                        <p className="mt-2 px-1 text-[13px] leading-5 text-[#4E4854] whitespace-pre-wrap">{selected.body}</p>
+                        <p className="mt-2 px-1 text-[13px] leading-5 whitespace-pre-wrap" style={{ color: color.story }}>{selected.body}</p>
                     ) : null}
                 </div>
             )}
