@@ -350,11 +350,11 @@ const MigrationMapWebview = () => {
 
             {!loading && selected && (
                 <div className="mt-1">
-                    <div className="mb-1 flex items-end justify-between">
-                        <p className="text-[28px] font-bold leading-none text-[#FF6A2B]">{selectedYear}</p>
-                        <p className="pb-1 text-[11px] font-semibold tracking-[0.22em]" style={{ color: color.faint }}>TIMELINE</p>
+                    <div className="mb-0.5 flex items-center justify-between">
+                        <p className="text-[13px] font-semibold leading-none text-[#FF6A2B]">{selectedYear}</p>
+                        <p className="text-[13px] font-semibold leading-none tracking-[0.12em]" style={{ color: color.faint }}>TIMELINE</p>
                     </div>
-                    <div className="relative pt-8">
+                    <div className="relative pt-6">
                         <span
                             className="absolute top-0 z-20 -translate-x-1/2 rounded-full px-2.5 py-0.5 text-[12px] font-bold leading-4 shadow-[0_2px_8px_rgba(28,28,30,0.12)]"
                             style={{ left: alongTrack(clampedThumb), background: color.card, color: color.text }}
