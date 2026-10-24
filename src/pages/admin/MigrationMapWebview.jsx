@@ -355,7 +355,7 @@ const MigrationMapWebview = () => {
                         <p className="text-[13px] font-semibold leading-none text-[#FF6A2B]">{selectedYear}</p>
                         <p className="text-[13px] font-semibold leading-none tracking-[0.12em]" style={{ color: color.faint }}>TIMELINE</p>
                     </div>
-                    <div className="relative pt-3.5">
+                    <div className="relative pt-7">
                         <span
                             className="absolute top-0 z-20 -translate-x-1/2 rounded-full px-2 py-px text-[12px] font-bold leading-none shadow-[0_2px_8px_rgba(28,28,30,0.12)]"
                             style={{ left: alongTrack(clampedThumb), background: color.card, color: color.text }}
