@@ -225,7 +225,7 @@ const MigrationMapWebview = () => {
 
     return (
         <div className="min-h-screen" style={{ background: color.page, color: color.text }}>
-        <div className="mx-auto min-h-screen w-full max-w-[430px] px-4 pb-6 pt-3">
+        <div className="mx-auto min-h-screen w-full max-w-[800px] px-4 pb-6 pt-3">
             <label className="flex items-center gap-2 rounded-full px-4 py-2.5 shadow-sm" style={{ background: color.card }}>
                 <svg viewBox="0 0 24 24" className="h-4 w-4 text-[#B0A8A0]" fill="none" stroke="currentColor" strokeWidth="2">
                     <circle cx="11" cy="11" r="7" />
