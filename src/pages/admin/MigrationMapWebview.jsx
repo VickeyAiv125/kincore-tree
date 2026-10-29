@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { useParams, useSearchParams } from 'react-router-dom';
+import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { useTheme } from '../../context/ThemeContext';
 
 const API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api';
@@ -36,6 +36,7 @@ const cityOf = (location) => String(location || '').split(',')[0].trim();
 const MigrationMapWebview = () => {
     const { familySpaceId } = useParams();
     const [searchParams] = useSearchParams();
+    const navigate = useNavigate();
     const { theme } = useTheme();
     const dark = theme === 'dark';
     const color = dark
@@ -66,7 +67,6 @@ const MigrationMapWebview = () => {
     const [migrationPoints, setMigrationPoints] = useState([]);
     const [stories, setStories] = useState([]);
     const [selectedId, setSelectedId] = useState(null);
-    const [storyOpen, setStoryOpen] = useState(false);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
     const [query, setQuery] = useState('');
@@ -173,7 +173,6 @@ const MigrationMapWebview = () => {
         }, null);
         if (nearest) {
             setSelectedId(nearest.id);
-            setStoryOpen(false);
         }
     };
 
@@ -437,23 +436,24 @@ const MigrationMapWebview = () => {
                             <p className="mt-1 text-[12px]" style={{ color: color.muted }}>
                                 {selected.year || 'Profile'}{selected.person_name ? ` • ${selected.person_name}` : ''}
                             </p>
-                            {selected.body ? (
+                            {selected ? (
                                 <div className="mt-2 flex justify-end">
                                     <button
                                         type="button"
-                                        onClick={() => setStoryOpen((open) => !open)}
+                                        onClick={() => {
+                                            const token = searchParams.get('token') || '';
+                                            const q = token ? `?token=${encodeURIComponent(token)}` : '';
+                                            navigate(`/migration-map/webview/${familySpaceId}/story/${encodeURIComponent(selected.id)}${q}`);
+                                        }}
                                         className="rounded-full px-3 py-1 text-[12px] font-semibold text-[#FF6A2B]"
                                         style={{ background: color.soft }}
                                     >
-                                        {storyOpen ? 'Hide story' : 'Read Story →'}
+                                        Read Story →
                                     </button>
                                 </div>
                             ) : null}
                         </div>
                     </article>
-                    {storyOpen && selected.body ? (
-                        <p className="mt-2 px-1 text-[13px] leading-5 whitespace-pre-wrap" style={{ color: color.story }}>{selected.body}</p>
-                    ) : null}
                 </div>
             )}
         </div>

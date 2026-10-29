@@ -17,6 +17,7 @@ export const PlanFeatures = lazy(() => import('../pages/admin/PlanFeatures'));
 export const MigrationMap = lazy(() => import('../pages/admin/MigrationMap'));
 export const CreateMigrationPoint = lazy(() => import('../pages/admin/CreateMigrationPoint'));
 export const MigrationMapWebview = lazy(() => import('../pages/admin/MigrationMapWebview'));
+export const MigrationStoryDetail = lazy(() => import('../pages/admin/MigrationStoryDetail'));
 export const KCCCoin = lazy(() => import('../pages/admin/KCCCoin'));
 export const Reports = lazy(() => import('../pages/admin/Reports'));
 export const Policies = lazy(() => import('../pages/admin/Policies'));

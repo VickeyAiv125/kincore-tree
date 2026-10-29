@@ -129,6 +129,7 @@ function App() {
         <Route path="/subscription/features" element={<P.Layout><P.PlanFeatures /></P.Layout>} />
         <Route path="/migration" element={<P.Layout><P.MigrationMap /></P.Layout>} />
         <Route path="/migration/add" element={<P.Layout><P.CreateMigrationPoint /></P.Layout>} />
+        <Route path="/migration-map/webview/:familySpaceId/story/:storyId" element={<P.MigrationStoryDetail />} />
         <Route path="/migration-map/webview/:familySpaceId" element={<P.MigrationMapWebview />} />
         <Route path="/family-tree/webview" element={<P.FamilyTree />} />
         <Route path="/family-tree/webview/:familySpaceId" element={<P.FamilyTree />} />
