@@ -107,7 +107,15 @@ const parseDob = (raw) => {
     }
     const slash = s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
     if (slash) {
-        const d = new Date(Date.UTC(+slash[3], +slash[1] - 1, +slash[2], 12));
+        let month = +slash[1];
+        let day = +slash[2];
+        const year = +slash[3];
+        if (month > 12 && day <= 12) {
+            const tmp = month;
+            month = day;
+            day = tmp;
+        }
+        const d = new Date(Date.UTC(year, month - 1, day, 12));
         return Number.isNaN(d.getTime()) ? null : d;
     }
     const d = new Date(s);
@@ -412,6 +420,11 @@ const TreeNodeAddModal = ({
     const dobBlock = relationDobBlock(addType, form.date_of_birth, person);
     const targetDob = getPersonDob(person);
     const parentDobMax = targetDob ? toIsoDate(new Date(targetDob.getTime() - 86400000)) : undefined;
+    const parentDobMaxEffective = (() => {
+        const today = todayIsoDate();
+        if (!parentDobMax) return today;
+        return parentDobMax < today ? parentDobMax : today;
+    })();
     const childDobMin = targetDob ? toIsoDate(new Date(targetDob.getTime() + 86400000)) : undefined;
 
     const personName = getPersonName(person);
@@ -644,7 +657,7 @@ const TreeNodeAddModal = ({
                                             value={form.date_of_birth}
                                             onChange={handleChange}
                                             required
-                                            max={parentDobMax}
+                                            max={parentDobMaxEffective}
                                             disabled={!targetDob}
                                         />
                                         <Field label="Anniversary date" name="anniversary_date" type="date" value={form.anniversary_date} onChange={handleChange} />
