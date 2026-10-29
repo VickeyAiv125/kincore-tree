@@ -730,6 +730,34 @@ const FamilyTree = () => {
         }).slice(0, 20);
     }, [persons, memberSearchQuery]);
 
+    const removeAppMember = async (member) => {
+        const personId = member?.id;
+        const familySpaceId = activeFamilySpaceId || getTreeWebviewContext().spaceId || '';
+        if (!personId || !familySpaceId) throw new Error('Could not remove this person');
+        if (member?.is_synthesized || member?.is_virtual) {
+            throw new Error('This entry is a membership placeholder, not a tree person.');
+        }
+        const res = await fetch(`${API}/clantree/person/${personId}`, {
+            method: 'DELETE',
+            headers: {
+                'Content-Type': 'application/json',
+                Authorization: `Bearer ${token()}`,
+            },
+            body: JSON.stringify({ family_space_id: familySpaceId }),
+        });
+        const data = await res.json().catch(() => ({}));
+        if (res.status === 202) {
+            setAppProfileMember(null);
+            showAlert(data.message || 'Removal sent for approval.', 'success', 'Submitted');
+            return;
+        }
+        if (!res.ok) throw new Error(data.error || data.message || 'Could not remove this person');
+        setAppProfileMember(null);
+        setSelectedMember(null);
+        showAlert(data.message || 'Person removed from the tree.', 'success', 'Removed');
+        fetchTreeData();
+    };
+
     const saveAppProfile = async (fields) => {
         const personId = appProfileMember?.id;
         if (!personId) throw new Error('This person could not be saved');
@@ -1123,6 +1151,12 @@ const FamilyTree = () => {
                     member={appProfileMember}
                     onClose={() => setAppProfileMember(null)}
                     onSave={saveAppProfile}
+                    canRemove={
+                        Boolean(appProfileMember?.id)
+                        && !appProfileMember?.is_synthesized
+                        && !appProfileMember?.is_virtual
+                    }
+                    onRemove={removeAppMember}
                     onAddRelative={(member) => {
                         setAppProfileMember(null);
                         openAddModal(member);

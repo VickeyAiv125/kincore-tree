@@ -9,6 +9,7 @@ import {
     Plus,
     Search,
     UserRoundPlus,
+    Trash2,
     X,
 } from 'lucide-react';
 
@@ -436,9 +437,12 @@ export const AppMemberProfileSheet = ({
     onClose,
     onAddRelative,
     onSave,
+    onRemove,
+    canRemove = false,
 }) => {
     const [editing, setEditing] = useState(false);
     const [saving, setSaving] = useState(false);
+    const [removing, setRemoving] = useState(false);
     const [error, setError] = useState('');
     const [draft, setDraft] = useState({
         name: '',
@@ -487,6 +491,24 @@ export const AppMemberProfileSheet = ({
             setError(err?.message || 'Could not save this profile');
         } finally {
             setSaving(false);
+        }
+    };
+
+    const removeFromTree = async () => {
+        if (!onRemove || !canRemove) return;
+        const label = name || 'this person';
+        const ok = window.confirm(
+            `Remove ${label} from the family tree?\n\nTheir parent/child/spouse links will be removed. This cannot be undone.`
+        );
+        if (!ok) return;
+        setRemoving(true);
+        setError('');
+        try {
+            await onRemove(member);
+        } catch (err) {
+            setError(err?.message || 'Could not remove this person');
+        } finally {
+            setRemoving(false);
         }
     };
 
@@ -626,6 +648,17 @@ export const AppMemberProfileSheet = ({
                     Add relative to this person
                 </button>
                 )}
+                {!editing && canRemove && onRemove ? (
+                    <button
+                        type="button"
+                        onClick={removeFromTree}
+                        disabled={removing}
+                        className="w-full mt-2 h-11 rounded-full bg-red-50 dark:bg-red-500/10 text-red-600 dark:text-red-400 font-bold text-[14px] border border-red-200 dark:border-red-500/30 flex items-center justify-center gap-2 disabled:opacity-60"
+                    >
+                        <Trash2 size={17} />
+                        {removing ? 'Removing…' : 'Remove from tree'}
+                    </button>
+                ) : null}
                 <button
                     type="button"
                     onClick={onClose}
