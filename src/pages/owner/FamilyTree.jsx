@@ -737,7 +737,7 @@ const FamilyTree = () => {
         if (member?.is_synthesized || member?.is_virtual) {
             throw new Error('This entry is a membership placeholder, not a tree person.');
         }
-        const res = await fetch(`${API}/clantree/person/${personId}`, {
+        const res = await fetch(`${API}/clantree/person/${personId}?family_space_id=${encodeURIComponent(familySpaceId)}`, {
             method: 'DELETE',
             headers: {
                 'Content-Type': 'application/json',
@@ -754,7 +754,14 @@ const FamilyTree = () => {
         if (!res.ok) throw new Error(data.error || data.message || 'Could not remove this person');
         setAppProfileMember(null);
         setSelectedMember(null);
-        showAlert(data.message || 'Person removed from the tree.', 'success', 'Removed');
+        const extra = Array.isArray(data.removed_disconnected_ids) ? data.removed_disconnected_ids.length : 0;
+        showAlert(
+            extra
+                ? `Person removed. ${extra} disconnected relative${extra === 1 ? '' : 's'} also removed.`
+                : (data.message || 'Person removed from the tree.'),
+            'success',
+            'Removed'
+        );
         fetchTreeData();
     };
 
