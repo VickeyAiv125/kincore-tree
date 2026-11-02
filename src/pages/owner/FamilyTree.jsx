@@ -85,7 +85,7 @@ const buildTree = (persons, relationships) => {
 
     (relationships || []).forEach(rel => {
         const type = String(rel.relationship_type || rel.relation_type || '').toLowerCase();
-        if (type === 'parent' || type === 'member' || type === 'father' || type === 'mother' || type.startsWith('parent:')) {
+        if (type === 'parent' || type.startsWith('parent:')) {
             if (!childrenOf[rel.person_id]) childrenOf[rel.person_id] = [];
             childrenOf[rel.person_id].push(rel.related_person_id);
             if (!parentsOf[rel.related_person_id]) parentsOf[rel.related_person_id] = [];
