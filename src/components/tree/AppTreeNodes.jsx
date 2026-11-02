@@ -498,7 +498,7 @@ export const AppMemberProfileSheet = ({
         if (!onRemove || !canRemove) return;
         const label = name || 'this person';
         const ok = window.confirm(
-            `Remove ${label} from the family tree?\n\nTheir parent/child/spouse links will be removed. This cannot be undone.`
+            `Remove ${label} from the family tree?\n\nTheir links will be removed. Relatives who are only connected through them will also be removed. This cannot be undone.`
         );
         if (!ok) return;
         setRemoving(true);

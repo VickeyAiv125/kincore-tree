@@ -85,7 +85,7 @@ const buildTree = (persons, relationships) => {
 
     (relationships || []).forEach(rel => {
         const type = String(rel.relationship_type || rel.relation_type || '').toLowerCase();
-        if (type === 'parent' || type.startsWith('parent:')) {
+        if (type === 'parent' || type === 'member' || type === 'father' || type === 'mother' || type.startsWith('parent:')) {
             if (!childrenOf[rel.person_id]) childrenOf[rel.person_id] = [];
             childrenOf[rel.person_id].push(rel.related_person_id);
             if (!parentsOf[rel.related_person_id]) parentsOf[rel.related_person_id] = [];
@@ -752,9 +752,12 @@ const FamilyTree = () => {
             return;
         }
         if (!res.ok) throw new Error(data.error || data.message || 'Could not remove this person');
+        const extraIds = Array.isArray(data.removed_disconnected_ids) ? data.removed_disconnected_ids : [];
+        const gone = new Set([personId, ...extraIds]);
+        setPersons((prev) => prev.filter((p) => !gone.has(p.id)));
         setAppProfileMember(null);
         setSelectedMember(null);
-        const extra = Array.isArray(data.removed_disconnected_ids) ? data.removed_disconnected_ids.length : 0;
+        const extra = extraIds.length;
         showAlert(
             extra
                 ? `Person removed. ${extra} disconnected relative${extra === 1 ? '' : 's'} also removed.`
@@ -1162,6 +1165,7 @@ const FamilyTree = () => {
                         Boolean(appProfileMember?.id)
                         && !appProfileMember?.is_synthesized
                         && !appProfileMember?.is_virtual
+                        && !isYou(appProfileMember, currentUserId)
                     }
                     onRemove={removeAppMember}
                     onAddRelative={(member) => {
